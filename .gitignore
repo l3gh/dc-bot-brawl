@@ -1,0 +1,42 @@
+# ── secrets ───────────────────────────
+.env
+.env.*
+*.env
+
+# ── python cache ──────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ── virtual environments ──────────────
+venv/
+.env/
+.venv/
+
+# ── IDE / editor ──────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS junk ───────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── logs ──────────────────────────────
+*.log
+
+# ── database (your linked tags) ───────
+linked_tags.db
+*.sqlite
+*.db
+
+# ── matplotlib / temp files ───────────
+*.png
+*.jpg
+
+# ── build / dist ──────────────────────
+build/
+dist/
+*.egg-info/
