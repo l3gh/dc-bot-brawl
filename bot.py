@@ -7,6 +7,7 @@
 """
 
 import asyncio
+import re
 import io
 import os
 import sqlite3
@@ -35,7 +36,7 @@ BS_GOLD = 0xF4B400
 BS_RED  = 0xD32F2F
 
 # ══════════════════════════════════════════════════════════
-#  DATABASE  (SQLite — zero extra deps), for future stuff
+#  DATABASE  (SQLite — zero extra deps)
 # ══════════════════════════════════════════════════════════
 
 DB_PATH = "linked_tags.db"
@@ -126,8 +127,6 @@ async def bs_get(session: aiohttp.ClientSession, path: str) -> dict | list:
 
 intents = discord.Intents.default()
 bot     = commands.Bot(command_prefix="bs!", intents=intents)
-if not GUILD_ID:
-    raise RuntimeError("GUILD_ID is not set correctly")
 
 
 @bot.event
@@ -142,12 +141,7 @@ async def on_ready() -> None:
         await bot.tree.sync()
         print("✅ Synced global slash commands (may take up to 1 h to propagate).")
     print(f"🎮 Logged in as {bot.user} ({bot.user.id})")
-    await bot.change_presence(
-        activity=discord.Streaming(
-            name="/help | Brawl Stars API",
-            url="https://l3gh.com"
-        )
-    )
+
 
 # ══════════════════════════════════════════════════════════
 #  SHARED HELPERS
@@ -193,6 +187,7 @@ def _items(data: dict | list) -> list:
     return data.get("items", [])
 
 
+
 MODE_EMOJI: dict[str, str] = { # maybe ill go and get emojis for all of them idk
     "gemGrab":       "<:gemgrab:1495579848867975249>",
     "brawlBall":     "<:brawlball:1495579359845679215>",
@@ -218,6 +213,11 @@ MODE_EMOJI: dict[str, str] = { # maybe ill go and get emojis for all of them idk
     "ranked":        "<:ranked:1495581799441633350>",
     "info":          "<:info:1495581796849553499>",
 }
+
+def _fmt_mode(mode: str) -> str:
+    """camelCase → Title Case fallback for unknown modes."""
+    return re.sub(r"([A-Z])", r" \1", mode).title().strip()
+
 
 MODE_NAME: dict[str, str] = {
     "gemGrab":       "Gem Grab",
@@ -245,7 +245,6 @@ MODE_NAME: dict[str, str] = {
     "info":          "Info",
 }
 
-
 ROLE_EMOJI: dict[str, str] = {
     "president":     "👑",
     "vicePresident": "🥈",
@@ -262,13 +261,16 @@ RESULT_ICON: dict[str, str] = {
 
 
 
+# ══════════════════════════════════════════════════════════
+#  GRAPH BUILDER
+# ══════════════════════════════════════════════════════════
+
 
 
 
 # ══════════════════════════════════════════════════════════
 #  GRAPH HELPERS
 # ══════════════════════════════════════════════════════════
-
 
 _BG      = "#0B0C18"
 _PLOT_BG = "#11121F"
@@ -278,10 +280,10 @@ _ACCENT  = "#4FC3F7"
 _TEXT_HI = "#FFFFFF"
 _TEXT_LO = "#8E90AA"
 _GRID    = "#1E2035"
- 
+
 _BS_TIME_FMT = "%Y%m%dT%H%M%S.%fZ"
- 
- 
+
+
 def _parse_bs_time(raw: str) -> datetime:
     """Parse Brawl Stars battleTime string → UTC datetime."""
     try:
@@ -289,8 +291,8 @@ def _parse_bs_time(raw: str) -> datetime:
         return dt.replace(tzinfo=timezone.utc)
     except ValueError:
         return datetime.now(timezone.utc)
- 
- 
+
+
 def battlelog_to_trophy_history(
     battles: list[dict],
     current_trophies: int,
@@ -306,22 +308,21 @@ def battlelog_to_trophy_history(
         if tc is None:
             continue
         ranked_tcs.append(int(tc))
- 
+
     if not ranked_tcs:
         return []
- 
-    # Walk backwards: ranked_tcs[0] is most recent, already reflected in current
+
     points: list[int] = []
     running = current_trophies
     for tc in ranked_tcs:
         points.append(running)
         running -= tc
- 
-    points.append(running)   # state before the oldest ranked battle
-    points.reverse()         # now oldest → newest
+
+    points.append(running)
+    points.reverse()
     return points
- 
- 
+
+
 def build_trophy_graph(
     tag: str,
     player_name: str,
@@ -336,21 +337,20 @@ def build_trophy_graph(
     Returns a BytesIO PNG.
     """
     trophies = history
-    xs       = list(range(len(trophies)))   # 0 … N
- 
-    # Clamp extremes
+    xs       = list(range(len(trophies)))
+
     median   = sorted(trophies)[len(trophies) // 2]
     trophies = [max(min(t, median * 2), 0) for t in trophies]
- 
+
     fig, ax = plt.subplots(figsize=(11, 5.2), dpi=150)
     fig.patch.set_facecolor(_BG)
     ax.set_facecolor(_PLOT_BG)
     for spine in ax.spines.values():
         spine.set_visible(False)
- 
+
     ax.yaxis.grid(True, color=_GRID, linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
- 
+
     # ── gradient fill ─────────────────────────────────────
     y_floor  = min(trophies) - (max(trophies) - min(trophies)) * 0.05
     n_strips = 50
@@ -362,23 +362,23 @@ def build_trophy_graph(
             where=[t >= y_floor + frac * (max(trophies) - y_floor) for t in trophies],
             color=_GOLDDIM, alpha=alpha, zorder=1, linewidth=0,
         )
- 
+
     # ── glow + line ───────────────────────────────────────
     ax.plot(xs, trophies, color=_GOLD, linewidth=6,   alpha=0.15, zorder=2)
     ax.plot(xs, trophies, color=_GOLD, linewidth=1.9, alpha=1.0,  zorder=3)
- 
+
     # ── dots — each one is a real battle ─────────────────
     ax.scatter(xs, trophies,
                s=24, color=_PLOT_BG, edgecolors=_GOLD, linewidths=1.4, zorder=4)
     ax.scatter([xs[-1]], [trophies[-1]], s=70, color=_GOLD, zorder=5)
- 
+
     # ── y-axis limits (must come before PB line check) ───
     spread   = max(trophies) - min(trophies) or 50
     padding  = max(spread * 0.25, 30)
     y_bottom = min(trophies) - padding
     y_top    = max(trophies) + padding
     ax.set_ylim(y_bottom, y_top)
- 
+
     # ── best-ever line (only if it fits in the visible range) ─
     if best_trophies > max(trophies) and best_trophies <= y_top:
         ax.axhline(best_trophies, color=_ACCENT, linewidth=1.1,
@@ -387,7 +387,7 @@ def build_trophy_graph(
                 f"  PB: {best_trophies:,}",
                 color=_ACCENT, fontsize=7.5, va="bottom",
                 fontfamily="DejaVu Sans")
- 
+
     # ── x-axis: integer battle numbers ───────────────────
     ax.tick_params(colors=_TEXT_LO, labelsize=8.5, length=0, pad=6)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"{int(v):,}"))
@@ -395,14 +395,14 @@ def build_trophy_graph(
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(
         lambda v, _: f"#{int(v)}" if 0 < v <= battle_count else ""
     ))
- 
+
     # ── x-axis labels: "oldest" / "now" ──────────────────
     ax.set_xlim(-0.5, len(xs) - 0.5)
     ax.text(xs[0],  y_bottom, " oldest", color=_TEXT_LO, fontsize=7.5,
             ha="left",  va="bottom", fontfamily="DejaVu Sans")
     ax.text(xs[-1], y_bottom, "now ", color=_TEXT_LO, fontsize=7.5,
             ha="right", va="bottom", fontfamily="DejaVu Sans")
- 
+
     # ── current value annotation ──────────────────────────
     ax.annotate(
         f"  {trophies[-1]:,}",
@@ -411,7 +411,7 @@ def build_trophy_graph(
         color=_GOLD, fontsize=9.5, fontweight="bold",
         fontfamily="DejaVu Sans",
     )
- 
+
     # ── net delta badge ───────────────────────────────────
     delta     = trophies[-1] - trophies[0]
     delta_str = f"{'▲' if delta >= 0 else '▼'} {abs(delta):,}"
@@ -420,14 +420,14 @@ def build_trophy_graph(
             transform=ax.transAxes, color=delta_col,
             fontsize=11.5, fontweight="bold", va="top",
             fontfamily="DejaVu Sans")
- 
+
     # ── watermark ─────────────────────────────────────────
     ax.text(0.99, 0.03,
             f"last {battle_count} ranked battles",
             transform=ax.transAxes, color=_TEXT_LO,
             fontsize=7.5, ha="right", va="bottom",
             fontfamily="DejaVu Sans")
- 
+
     # ── title ─────────────────────────────────────────────
     fig.text(0.065, 0.965, f"{player_name}  •  #{tag}",
              color=_TEXT_HI, fontsize=14, fontweight="bold",
@@ -435,9 +435,9 @@ def build_trophy_graph(
     fig.text(0.065, 0.895, "Trophy Progress  —  last 25 battles",
              color=_TEXT_LO, fontsize=9, va="top",
              fontfamily="DejaVu Sans")
- 
+
     plt.tight_layout(rect=[0, 0, 1, 0.87])
- 
+
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=150, facecolor=_BG, bbox_inches="tight")
     plt.close(fig)
@@ -519,125 +519,6 @@ async def tagof_cmd(interaction: discord.Interaction, user: discord.Member) -> N
 
 
 # ══════════════════════════════════════════════════════════
-#  /help
-# ══════════════════════════════════════════════════════════
-
-@bot.tree.command(
-    name="help",
-    description="List all bot commands."
-)
-async def help_cmd(interaction: discord.Interaction) -> None:
-    em = discord.Embed(
-        title="Brawl Stars Bot — Help",
-        color=BS_BLUE,
-        description="Available slash commands",
-    )
-
-    em.add_field(
-        name="/link",
-        value="Link your Brawl Stars tag to your Discord account",
-        inline=False,
-    )
-    em.add_field(
-        name="/unlink",
-        value="Remove your linked tag",
-        inline=False,
-    )
-    em.add_field(
-        name="/whoami",
-        value="Show your linked tag",
-        inline=False,
-    )
-    em.add_field(
-        name="/tagof",
-        value="Check another user's linked tag",
-        inline=False,
-    )
-    em.add_field(
-        name="/profile",
-        value="Full player profile",
-        inline=False,
-    )
-    em.add_field(
-        name="/stats",
-        value="Quick player stats summary",
-        inline=False,
-    )
-    em.add_field(
-        name="/battlelog",
-        value="Recent battles list",
-        inline=False,
-    )
-    em.add_field(
-        name="/trophygraph",
-        value="Trophy progression graph (last ranked battles)",
-        inline=False,
-    )
-    em.add_field(
-        name="/brawlers",
-        value="List owned brawlers",
-        inline=False,
-    )
-    em.add_field(
-        name="/brawlerlist",
-        value="All game brawlers",
-        inline=False,
-    )
-    em.add_field(
-        name="/brawlerinfo",
-        value="Star powers + gadgets of a brawler",
-        inline=False,
-    )
-    em.add_field(
-        name="/club",
-        value="Club info from player or direct tag (C:#TAG)",
-        inline=False,
-    )
-    em.add_field(
-        name="/clubmembers",
-        value="List club members",
-        inline=False,
-    )
-    em.add_field(
-        name="/events",
-        value="Current event rotation",
-        inline=False,
-    )
-    em.add_field(
-        name="/rankings_players",
-        value="Top players leaderboard",
-        inline=False,
-    )
-    em.add_field(
-        name="/rankings_clubs",
-        value="Top clubs leaderboard",
-        inline=False,
-    )
-    em.add_field(
-        name="/rankings_brawler",
-        value="Top players for a brawler",
-        inline=False,
-    )
-    em.add_field(
-        name="/compare",
-        value="Compare two players",
-        inline=False,
-    )
-    em.add_field(
-        name="/powerplay_seasons",
-        value="List Power Play seasons",
-        inline=False,
-    )
-    em.add_field(
-        name="/powerplay_season",
-        value="Leaderboard for a Power Play season",
-        inline=False,
-    )
-
-    await interaction.response.send_message(embed=em, ephemeral=True)
-
-
-# ══════════════════════════════════════════════════════════
 #  /profile
 # ══════════════════════════════════════════════════════════
 
@@ -705,7 +586,7 @@ async def battlelog_cmd(
     except ValueError as e:
         await interaction.followup.send(embed=_err(str(e)))
         return
- 
+
     async with aiohttp.ClientSession() as s:
         try:
             log_data, p = await asyncio.gather(
@@ -715,12 +596,12 @@ async def battlelog_cmd(
         except BSError as e:
             await interaction.followup.send(embed=_err(f"API {e.status}: {e.message}"))
             return
- 
+
     battles = _items(log_data)[:count]
     if not battles:
         await interaction.followup.send(embed=_err("No recent battles found."))
         return
- 
+
     lines: list[str] = []
     for b in battles:
         event    = b.get("event", {})
@@ -760,9 +641,9 @@ async def battlelog_cmd(
         else:
             res_icon = RESULT_ICON.get(result, "❓")
         tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}🏆)" if tc is not None else ""
-        mode_name = MODE_NAME.get(mode, re.sub(r"([A-Z])", r" \1", mode).title().strip())
+        mode_name = MODE_NAME.get(mode, _fmt_mode(mode))
         lines.append(f"{res_icon} {emoji} **{mode_name}** · {label}{tc_str}")
- 
+
     em = _embed(f"⚔️  Battle Log — {p.get('name','?')} #{bs_tag}")
     em.description = "\n".join(lines)
     em.set_footer(text=f"Last {len(battles)} battles  •  api.brawlstars.com")
@@ -924,8 +805,8 @@ async def clubmembers_cmd(
 
     lines = []
     for m in members[:30]:
-        re = ROLE_EMOJI.get(m.get("role", "member"), "👤")
-        lines.append(f"{re} **{m.get('name','?')}** — 🏆 {m.get('trophies',0):,}")
+        role_icon = ROLE_EMOJI.get(m.get("role", "member"), "👤")
+        lines.append(f"{role_icon} **{m.get('name','?')}** — 🏆 {m.get('trophies',0):,}")
 
     em = _embed(f"👥  {club.get('name','?')} Members", color=BS_GOLD)
     em.description = "\n".join(lines) or "No members found."
@@ -949,7 +830,7 @@ async def events_cmd(interaction: discord.Interaction) -> None:
         except BSError as e:
             await interaction.followup.send(embed=_err(f"API {e.status}: {e.message}"))
             return
- 
+
     events = data if isinstance(data, list) else data.get("items", [])
     em = _embed("📅  Current Event Rotation", color=0x6A1B9A)
     for ev in events:
@@ -966,14 +847,13 @@ async def events_cmd(interaction: discord.Interaction) -> None:
         except (ValueError, TypeError):
             end_str = "?"
         em.add_field(
-            name=f"{emoji}  Slot {slot} — {MODE_NAME.get(mode, re.sub(r'([A-Z])', r' \1', mode).title().strip())}",
+            name=f"{emoji}  Slot {slot} — {MODE_NAME.get(mode, _fmt_mode(mode))}",
             value=f"🗺️ {map_name}\n⏰ {end_str}",
             inline=True,
         )
     if not events:
         em.description = "No events found."
     await interaction.followup.send(embed=em)
-
 
 
 # ══════════════════════════════════════════════════════════
@@ -1361,7 +1241,6 @@ async def stats_cmd(
     await interaction.followup.send(embed=em)
 
 
-
 # ══════════════════════════════════════════════════════════
 #  /trophygraph
 # ══════════════════════════════════════════════════════════
@@ -1429,7 +1308,7 @@ async def trophygraph_cmd(
         bs_tag, player_name, history, current_trophies, best_trophies, ranked_count,
     )
 
-    delta_val = history[-1][1] - history[0][1]
+    delta_val = history[-1] - history[0]
     sign      = "+" if delta_val >= 0 else ""
     em = discord.Embed(
         title=f"🏆  {player_name}  •  #{bs_tag}",
@@ -1443,18 +1322,11 @@ async def trophygraph_cmd(
     await interaction.followup.send(embed=em, file=file)
 
 
-# ══════════════════════════════════════════════════════════
-# ACTIVITY
-# ══════════════════════════════════════════════════════════
-
-activity = discord.CustomActivity(
-    name="/help | Brawl Stars API",  # status text
-    type=5
-)
 
 # ══════════════════════════════════════════════════════════
 #  ENTRY POINT
 # ══════════════════════════════════════════════════════════
+
 if __name__ == "__main__":
     missing = [k for k, v in {"DISCORD_TOKEN": DISCORD_TOKEN, "BS_API_KEY": BS_API_KEY}.items() if not v]
     if missing:
