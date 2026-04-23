@@ -219,6 +219,33 @@ MODE_EMOJI: dict[str, str] = { # maybe ill go and get emojis for all of them idk
     "info":          "<:info:1495581796849553499>",
 }
 
+MODE_NAME: dict[str, str] = {
+    "gemGrab":       "Gem Grab",
+    "brawlBall":     "Brawl Ball",
+    "bounty":        "Bounty",
+    "heist":         "Heist",
+    "siege":         "Siege",
+    "hotZone":       "Hot Zone",
+    "knockout":      "Knockout",
+    "basketBrawl":   "Basket Brawl",
+    "volleyBrawl":   "Volley Brawl",
+    "duoShowdown":   "Duo Showdown",
+    "soloShowdown":  "Solo Showdown",
+    "trioShowdown":  "Trio Showdown",
+    "superCity":     "Super City Rampage",
+    "roboRumble":    "Robo Rumble",
+    "bigGame":       "Big Game",
+    "duels":         "Duels",
+    "wipeout":       "Wipeout",
+    "payload":       "Payload",
+    "holdTheTrophy": "Hold The Trophy",
+    "trophyThieves": "Trophy Thieves",
+    "brawlTV":       "Brawl TV",
+    "ranked":        "Ranked",
+    "info":          "Info",
+}
+
+
 ROLE_EMOJI: dict[str, str] = {
     "president":     "👑",
     "vicePresident": "🥈",
@@ -267,67 +294,53 @@ def _parse_bs_time(raw: str) -> datetime:
 def battlelog_to_trophy_history(
     battles: list[dict],
     current_trophies: int,
-) -> list[tuple[datetime, int]]:
+) -> list[int]:
     """
-    Reconstruct a trophy timeline by walking the battle log backwards.
- 
-    Returns [(datetime, trophies), ...] ordered oldest → newest,
-    including the current reading as the final point.
- 
-    Only battles that carry a trophyChange are included (ranked modes).
-    Showdown, special events, and friendlies are skipped.
+    Reconstruct trophy counts per ranked battle, ordered oldest → newest.
+    X-axis is battle index, not time — avoids distortion from uneven play sessions.
+    Returns a list of trophy counts (one per ranked battle + the "before" starting point).
     """
-    # Collect battles that have a numeric trophyChange, ordered newest → oldest
-    ranked: list[tuple[datetime, int]] = []
+    ranked_tcs: list[int] = []
     for b in battles:
         tc = b.get("battle", {}).get("trophyChange")
         if tc is None:
             continue
-        raw_time = b.get("battleTime", "")
-        ranked.append((_parse_bs_time(raw_time), int(tc)))
+        ranked_tcs.append(int(tc))
  
-    if not ranked:
+    if not ranked_tcs:
         return []
  
-    # Work backwards from current trophies
-    points: list[tuple[datetime, int]] = []
+    # Walk backwards: ranked_tcs[0] is most recent, already reflected in current
+    points: list[int] = []
     running = current_trophies
-    # ranked[0] is most recent battle — its trophyChange is already baked
-    # into current_trophies.  So the trophy count *before* that battle was
-    # current_trophies - trophyChange[0], etc.
-    for dt, tc in ranked:
-        points.append((dt, running))
-        running -= tc  # undo this battle to get the count before it
+    for tc in ranked_tcs:
+        points.append(running)
+        running -= tc
  
-    # Oldest point (before the oldest ranked battle)
-    oldest_dt = ranked[-1][0] - timedelta(minutes=1)
-    points.append((oldest_dt, running))
- 
-    # Reverse so list is oldest → newest
-    points.reverse()
+    points.append(running)   # state before the oldest ranked battle
+    points.reverse()         # now oldest → newest
     return points
  
  
 def build_trophy_graph(
     tag: str,
     player_name: str,
-    history: list[tuple[datetime, int]],
+    history: list[int],
     current_trophies: int,
     best_trophies: int,
     battle_count: int,
 ) -> io.BytesIO:
     """
-    Render a dark-themed trophy-over-time line chart from battle log history.
+    Render a dark-themed trophy-per-battle chart.
+    X-axis = battle number (1 = oldest), no timestamps.
     Returns a BytesIO PNG.
     """
-    dates    = [h[0] for h in history]
-    trophies = [h[1] for h in history]
+    trophies = history
+    xs       = list(range(len(trophies)))   # 0 … N
  
-    # Clamp extremes — very occasionally trophyChange data produces artifacts
-    median = sorted(trophies)[len(trophies) // 2]
+    # Clamp extremes
+    median   = sorted(trophies)[len(trophies) // 2]
     trophies = [max(min(t, median * 2), 0) for t in trophies]
- 
-    span_hours = max((dates[-1] - dates[0]).total_seconds() / 3600, 1)
  
     fig, ax = plt.subplots(figsize=(11, 5.2), dpi=150)
     fig.patch.set_facecolor(_BG)
@@ -345,19 +358,19 @@ def build_trophy_graph(
         frac  = i / n_strips
         alpha = 0.22 * (1 - frac) ** 1.8
         ax.fill_between(
-            dates, y_floor, trophies,
+            xs, y_floor, trophies,
             where=[t >= y_floor + frac * (max(trophies) - y_floor) for t in trophies],
             color=_GOLDDIM, alpha=alpha, zorder=1, linewidth=0,
         )
  
     # ── glow + line ───────────────────────────────────────
-    ax.plot(dates, trophies, color=_GOLD, linewidth=6,   alpha=0.15, zorder=2)
-    ax.plot(dates, trophies, color=_GOLD, linewidth=1.9, alpha=1.0,  zorder=3)
+    ax.plot(xs, trophies, color=_GOLD, linewidth=6,   alpha=0.15, zorder=2)
+    ax.plot(xs, trophies, color=_GOLD, linewidth=1.9, alpha=1.0,  zorder=3)
  
     # ── dots — each one is a real battle ─────────────────
-    ax.scatter(dates, trophies,
+    ax.scatter(xs, trophies,
                s=24, color=_PLOT_BG, edgecolors=_GOLD, linewidths=1.4, zorder=4)
-    ax.scatter([dates[-1]], [trophies[-1]], s=70, color=_GOLD, zorder=5)
+    ax.scatter([xs[-1]], [trophies[-1]], s=70, color=_GOLD, zorder=5)
  
     # ── y-axis limits (must come before PB line check) ───
     spread   = max(trophies) - min(trophies) or 50
@@ -370,31 +383,30 @@ def build_trophy_graph(
     if best_trophies > max(trophies) and best_trophies <= y_top:
         ax.axhline(best_trophies, color=_ACCENT, linewidth=1.1,
                    linestyle="--", alpha=0.55, zorder=3)
-        ax.text(dates[0], best_trophies,
+        ax.text(xs[0], best_trophies,
                 f"  PB: {best_trophies:,}",
                 color=_ACCENT, fontsize=7.5, va="bottom",
                 fontfamily="DejaVu Sans")
  
-    # ── x-axis: format based on span ─────────────────────
+    # ── x-axis: integer battle numbers ───────────────────
     ax.tick_params(colors=_TEXT_LO, labelsize=8.5, length=0, pad=6)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"{int(v):,}"))
+    ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True, nbins=10))
+    ax.xaxis.set_major_formatter(mticker.FuncFormatter(
+        lambda v, _: f"#{int(v)}" if 0 < v <= battle_count else ""
+    ))
  
-    if span_hours <= 24:
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-        ax.xaxis.set_major_locator(mdates.HourLocator(interval=3))
-    elif span_hours <= 72:
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d %H:%M"))
-        ax.xaxis.set_major_locator(mdates.HourLocator(interval=12))
-    else:
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
-        ax.xaxis.set_major_locator(mdates.DayLocator())
- 
-    plt.setp(ax.get_xticklabels(), rotation=28, ha="right")
+    # ── x-axis labels: "oldest" / "now" ──────────────────
+    ax.set_xlim(-0.5, len(xs) - 0.5)
+    ax.text(xs[0],  y_bottom, " oldest", color=_TEXT_LO, fontsize=7.5,
+            ha="left",  va="bottom", fontfamily="DejaVu Sans")
+    ax.text(xs[-1], y_bottom, "now ", color=_TEXT_LO, fontsize=7.5,
+            ha="right", va="bottom", fontfamily="DejaVu Sans")
  
     # ── current value annotation ──────────────────────────
     ax.annotate(
         f"  {trophies[-1]:,}",
-        xy=(dates[-1], trophies[-1]),
+        xy=(xs[-1], trophies[-1]),
         xytext=(8, 4), textcoords="offset points",
         color=_GOLD, fontsize=9.5, fontweight="bold",
         fontfamily="DejaVu Sans",
@@ -431,6 +443,7 @@ def build_trophy_graph(
     plt.close(fig)
     buf.seek(0)
     return buf
+
 
 # ══════════════════════════════════════════════════════════
 #  /link  /unlink  /whoami  /tagof
@@ -692,7 +705,7 @@ async def battlelog_cmd(
     except ValueError as e:
         await interaction.followup.send(embed=_err(str(e)))
         return
-
+ 
     async with aiohttp.ClientSession() as s:
         try:
             log_data, p = await asyncio.gather(
@@ -702,12 +715,12 @@ async def battlelog_cmd(
         except BSError as e:
             await interaction.followup.send(embed=_err(f"API {e.status}: {e.message}"))
             return
-
+ 
     battles = _items(log_data)[:count]
     if not battles:
         await interaction.followup.send(embed=_err("No recent battles found."))
         return
-
+ 
     lines: list[str] = []
     for b in battles:
         event    = b.get("event", {})
@@ -717,16 +730,18 @@ async def battlelog_cmd(
         result   = battle.get("result")
         # rank & trophyChange: top-level for showdown, but may also live
         # inside battle.players (solo SD) or battle.teams (3v3/duo SD)
-        rank = battle.get("rank")
-        tc   = battle.get("trophyChange")
+        rank     = battle.get("rank")
+        tc       = battle.get("trophyChange")
+        brawler  = None
         for entry in battle.get("players", []):
             if _norm(entry.get("tag", "")) == bs_tag:
                 if rank is None:
                     rank = entry.get("rank")
                 if tc is None:
                     tc = entry.get("trophyChange")
+                brawler = entry.get("brawler", {}).get("name")
                 break
-        if tc is None:
+        if brawler is None:
             for team in battle.get("teams", []):
                 for entry in team:
                     if _norm(entry.get("tag", "")) == bs_tag:
@@ -734,17 +749,20 @@ async def battlelog_cmd(
                             rank = entry.get("rank")
                         if tc is None:
                             tc = entry.get("trophyChange")
+                        brawler = entry.get("brawler", {}).get("name")
                         break
-                if tc is not None or rank is not None:
+                if brawler is not None or tc is not None or rank is not None:
                     break
+        label    = brawler.title() if brawler else map_name
         emoji    = MODE_EMOJI.get(mode, "🎮")
         if rank is not None:
             res_icon = f"`#{rank}`"
         else:
             res_icon = RESULT_ICON.get(result, "❓")
-        tc_str   = f"  ({'+' if tc and tc > 0 else ''}{tc}🏆)" if tc is not None else ""
-        lines.append(f"{res_icon} {emoji} **{mode}** · {map_name}{tc_str}")
-
+        tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}🏆)" if tc is not None else ""
+        mode_name = MODE_NAME.get(mode, re.sub(r"([A-Z])", r" \1", mode).title().strip())
+        lines.append(f"{res_icon} {emoji} **{mode_name}** · {label}{tc_str}")
+ 
     em = _embed(f"⚔️  Battle Log — {p.get('name','?')} #{bs_tag}")
     em.description = "\n".join(lines)
     em.set_footer(text=f"Last {len(battles)} battles  •  api.brawlstars.com")
@@ -931,7 +949,7 @@ async def events_cmd(interaction: discord.Interaction) -> None:
         except BSError as e:
             await interaction.followup.send(embed=_err(f"API {e.status}: {e.message}"))
             return
-
+ 
     events = data if isinstance(data, list) else data.get("items", [])
     em = _embed("📅  Current Event Rotation", color=0x6A1B9A)
     for ev in events:
@@ -941,15 +959,21 @@ async def events_cmd(interaction: discord.Interaction) -> None:
         map_name = event.get("map", "?")
         end      = ev.get("endTime", "")
         emoji    = MODE_EMOJI.get(mode, "🎮")
-        end_str  = end[:10] if end else "?"
+        # Parse BS time format → Unix timestamp for Discord's native <t:...:R>
+        try:
+            end_dt  = datetime.strptime(end, "%Y%m%dT%H%M%S.%fZ").replace(tzinfo=timezone.utc)
+            end_str = f"<t:{int(end_dt.timestamp())}:R>"
+        except (ValueError, TypeError):
+            end_str = "?"
         em.add_field(
-            name=f"{emoji}  Slot {slot} — {mode}",
-            value=f"🗺️ {map_name}\n⏰ Ends {end_str}",
+            name=f"{emoji}  Slot {slot} — {MODE_NAME.get(mode, re.sub(r'([A-Z])', r' \1', mode).title().strip())}",
+            value=f"🗺️ {map_name}\n⏰ {end_str}",
             inline=True,
         )
     if not events:
         em.description = "No events found."
     await interaction.followup.send(embed=em)
+
 
 
 # ══════════════════════════════════════════════════════════
