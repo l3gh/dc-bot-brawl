@@ -1,3 +1,5 @@
+# thank you claudia for writing me this majestig .gitignore
+
 # ── secrets ───────────────────────────
 .env
 .env.*

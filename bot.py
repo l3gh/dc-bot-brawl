@@ -2,14 +2,8 @@
 """
 ╔══════════════════════════════════════════════════════════╗
 ║           Brawl Stars Discord Bot  —  bot.py             ║
-║  Full API coverage · Tag linking · Per-command overrides ║
-║  Trophy graph · Auto-snapshots                           ║
-╚══════════════════════════════════════════════════════════╝
-
-.env keys required:
-  DISCORD_TOKEN   — your bot token
-  BS_API_KEY      — Brawl Stars API key (api.brawlstars.com)
-  GUILD_ID        — (optional) guild ID for instant slash-command sync
+║   Full API coverage · Tag linking · Trophy graph         ║
+╚══════════════════════════════════════════════════════════╝    
 """
 
 import asyncio
@@ -41,7 +35,7 @@ BS_GOLD = 0xF4B400
 BS_RED  = 0xD32F2F
 
 # ══════════════════════════════════════════════════════════
-#  DATABASE  (SQLite — zero extra deps)
+#  DATABASE  (SQLite — zero extra deps), for future stuff
 # ══════════════════════════════════════════════════════════
 
 DB_PATH = "linked_tags.db"
@@ -199,7 +193,7 @@ def _items(data: dict | list) -> list:
     return data.get("items", [])
 
 
-MODE_EMOJI: dict[str, str] = {
+MODE_EMOJI: dict[str, str] = { # maybe ill go and get emojis for all of them idk
     "gemGrab":       "<:gemgrab:1495579848867975249>",
     "brawlBall":     "<:brawlball:1495579359845679215>",
     "bounty":        "<:bounty:1495581805762449669>",
@@ -241,16 +235,13 @@ RESULT_ICON: dict[str, str] = {
 
 
 
-# ══════════════════════════════════════════════════════════
-#  GRAPH BUILDER
-# ══════════════════════════════════════════════════════════
-
 
 
 
 # ══════════════════════════════════════════════════════════
 #  GRAPH HELPERS
 # ══════════════════════════════════════════════════════════
+
 
 _BG      = "#0B0C18"
 _PLOT_BG = "#11121F"
@@ -260,10 +251,10 @@ _ACCENT  = "#4FC3F7"
 _TEXT_HI = "#FFFFFF"
 _TEXT_LO = "#8E90AA"
 _GRID    = "#1E2035"
-
+ 
 _BS_TIME_FMT = "%Y%m%dT%H%M%S.%fZ"
-
-
+ 
+ 
 def _parse_bs_time(raw: str) -> datetime:
     """Parse Brawl Stars battleTime string → UTC datetime."""
     try:
@@ -271,18 +262,18 @@ def _parse_bs_time(raw: str) -> datetime:
         return dt.replace(tzinfo=timezone.utc)
     except ValueError:
         return datetime.now(timezone.utc)
-
-
+ 
+ 
 def battlelog_to_trophy_history(
     battles: list[dict],
     current_trophies: int,
 ) -> list[tuple[datetime, int]]:
     """
     Reconstruct a trophy timeline by walking the battle log backwards.
-
+ 
     Returns [(datetime, trophies), ...] ordered oldest → newest,
     including the current reading as the final point.
-
+ 
     Only battles that carry a trophyChange are included (ranked modes).
     Showdown, special events, and friendlies are skipped.
     """
@@ -294,10 +285,10 @@ def battlelog_to_trophy_history(
             continue
         raw_time = b.get("battleTime", "")
         ranked.append((_parse_bs_time(raw_time), int(tc)))
-
+ 
     if not ranked:
         return []
-
+ 
     # Work backwards from current trophies
     points: list[tuple[datetime, int]] = []
     running = current_trophies
@@ -307,16 +298,16 @@ def battlelog_to_trophy_history(
     for dt, tc in ranked:
         points.append((dt, running))
         running -= tc  # undo this battle to get the count before it
-
+ 
     # Oldest point (before the oldest ranked battle)
     oldest_dt = ranked[-1][0] - timedelta(minutes=1)
     points.append((oldest_dt, running))
-
+ 
     # Reverse so list is oldest → newest
     points.reverse()
     return points
-
-
+ 
+ 
 def build_trophy_graph(
     tag: str,
     player_name: str,
@@ -331,22 +322,22 @@ def build_trophy_graph(
     """
     dates    = [h[0] for h in history]
     trophies = [h[1] for h in history]
-
+ 
     # Clamp extremes — very occasionally trophyChange data produces artifacts
     median = sorted(trophies)[len(trophies) // 2]
     trophies = [max(min(t, median * 2), 0) for t in trophies]
-
+ 
     span_hours = max((dates[-1] - dates[0]).total_seconds() / 3600, 1)
-
+ 
     fig, ax = plt.subplots(figsize=(11, 5.2), dpi=150)
     fig.patch.set_facecolor(_BG)
     ax.set_facecolor(_PLOT_BG)
     for spine in ax.spines.values():
         spine.set_visible(False)
-
+ 
     ax.yaxis.grid(True, color=_GRID, linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
-
+ 
     # ── gradient fill ─────────────────────────────────────
     y_floor  = min(trophies) - (max(trophies) - min(trophies)) * 0.05
     n_strips = 50
@@ -358,17 +349,24 @@ def build_trophy_graph(
             where=[t >= y_floor + frac * (max(trophies) - y_floor) for t in trophies],
             color=_GOLDDIM, alpha=alpha, zorder=1, linewidth=0,
         )
-
+ 
     # ── glow + line ───────────────────────────────────────
     ax.plot(dates, trophies, color=_GOLD, linewidth=6,   alpha=0.15, zorder=2)
     ax.plot(dates, trophies, color=_GOLD, linewidth=1.9, alpha=1.0,  zorder=3)
-
+ 
     # ── dots — each one is a real battle ─────────────────
     ax.scatter(dates, trophies,
                s=24, color=_PLOT_BG, edgecolors=_GOLD, linewidths=1.4, zorder=4)
     ax.scatter([dates[-1]], [trophies[-1]], s=70, color=_GOLD, zorder=5)
-
-    # ── best-ever line ────────────────────────────────────
+ 
+    # ── y-axis limits (must come before PB line check) ───
+    spread   = max(trophies) - min(trophies) or 50
+    padding  = max(spread * 0.25, 30)
+    y_bottom = min(trophies) - padding
+    y_top    = max(trophies) + padding
+    ax.set_ylim(y_bottom, y_top)
+ 
+    # ── best-ever line (only if it fits in the visible range) ─
     if best_trophies > max(trophies) and best_trophies <= y_top:
         ax.axhline(best_trophies, color=_ACCENT, linewidth=1.1,
                    linestyle="--", alpha=0.55, zorder=3)
@@ -376,11 +374,11 @@ def build_trophy_graph(
                 f"  PB: {best_trophies:,}",
                 color=_ACCENT, fontsize=7.5, va="bottom",
                 fontfamily="DejaVu Sans")
-
+ 
     # ── x-axis: format based on span ─────────────────────
     ax.tick_params(colors=_TEXT_LO, labelsize=8.5, length=0, pad=6)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"{int(v):,}"))
-
+ 
     if span_hours <= 24:
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
         ax.xaxis.set_major_locator(mdates.HourLocator(interval=3))
@@ -390,16 +388,9 @@ def build_trophy_graph(
     else:
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
         ax.xaxis.set_major_locator(mdates.DayLocator())
-
+ 
     plt.setp(ax.get_xticklabels(), rotation=28, ha="right")
-
-    # ── y-axis limits ─────────────────────────────────────
-    spread   = max(trophies) - min(trophies) or 50
-    padding  = max(spread * 0.25, 30)   # at least 30 trophies breathing room
-    y_bottom = min(trophies) - padding
-    y_top    = max(trophies) + padding
-    ax.set_ylim(y_bottom, y_top)
-
+ 
     # ── current value annotation ──────────────────────────
     ax.annotate(
         f"  {trophies[-1]:,}",
@@ -408,7 +399,7 @@ def build_trophy_graph(
         color=_GOLD, fontsize=9.5, fontweight="bold",
         fontfamily="DejaVu Sans",
     )
-
+ 
     # ── net delta badge ───────────────────────────────────
     delta     = trophies[-1] - trophies[0]
     delta_str = f"{'▲' if delta >= 0 else '▼'} {abs(delta):,}"
@@ -417,14 +408,14 @@ def build_trophy_graph(
             transform=ax.transAxes, color=delta_col,
             fontsize=11.5, fontweight="bold", va="top",
             fontfamily="DejaVu Sans")
-
+ 
     # ── watermark ─────────────────────────────────────────
     ax.text(0.99, 0.03,
             f"last {battle_count} ranked battles",
             transform=ax.transAxes, color=_TEXT_LO,
             fontsize=7.5, ha="right", va="bottom",
             fontfamily="DejaVu Sans")
-
+ 
     # ── title ─────────────────────────────────────────────
     fig.text(0.065, 0.965, f"{player_name}  •  #{tag}",
              color=_TEXT_HI, fontsize=14, fontweight="bold",
@@ -432,15 +423,14 @@ def build_trophy_graph(
     fig.text(0.065, 0.895, "Trophy Progress  —  last 25 battles",
              color=_TEXT_LO, fontsize=9, va="top",
              fontfamily="DejaVu Sans")
-
+ 
     plt.tight_layout(rect=[0, 0, 1, 0.87])
-
+ 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=150, facecolor=_BG, bbox_inches="tight")
     plt.close(fig)
     buf.seek(0)
     return buf
-
 
 # ══════════════════════════════════════════════════════════
 #  /link  /unlink  /whoami  /tagof
