@@ -712,6 +712,77 @@ async def brawlers_cmd(
 
 
 # ══════════════════════════════════════════════════════════
+#  /top
+# ══════════════════════════════════════════════════════════
+
+@bot.tree.command(name="top", description="Show top brawlers for a player.")
+@app_commands.describe(
+    length="How many entries to show",
+    mode="Sort by current or peak",
+    user="Discord user (uses their linked tag)",
+    tag="Explicit Brawl Stars player tag",
+)
+@app_commands.choices(
+    length=[
+        app_commands.Choice(name="Top 5", value=5),
+        app_commands.Choice(name="Top 10", value=10),
+        app_commands.Choice(name="Top 25", value=25),
+    ],
+    mode=[
+        app_commands.Choice(name="Current trophies", value="current"),
+        app_commands.Choice(name="Peak trophies", value="peak"),
+    ],
+)
+async def top_cmd(
+    interaction: discord.Interaction,
+    length: int = 10,
+    mode: str = "current",
+    user: discord.Member | None = None,
+    tag: str | None = None,
+) -> None:
+    await interaction.response.defer()
+
+    try:
+        bs_tag = await resolve_tag(interaction, user, tag)
+    except ValueError as e:
+        await interaction.followup.send(embed=_err(str(e)))
+        return
+
+    async with aiohttp.ClientSession() as s:
+        try:
+            p = await bs_get(s, f"/players/{_enc(bs_tag)}")
+        except BSError as e:
+            await interaction.followup.send(embed=_err(f"API {e.status}: {e.message}"))
+            return
+
+    brawlers: list[dict] = p.get("brawlers", [])
+
+    if mode == "current":
+        key = "trophies"
+        title_mode = "Current Trophies"
+    else:
+        key = "highestTrophies"
+        title_mode = "Peak Trophies"
+
+    brawlers.sort(key=lambda b: b.get(key, 0), reverse=True)
+    top_list = brawlers[:length]
+
+    lines = []
+    for i, b in enumerate(top_list, 1):
+        name = b.get("name", "?").title()
+        tr   = b.get("trophies", 0)
+        ht   = b.get("highestTrophies", 0)
+        lines.append(f"`#{i:02}` **{name}** — 🏆 {tr:,} (↑{ht:,})")
+
+    em = _embed(
+        f"🏆 Top {length} Brawlers — {p.get('name','?')} #{bs_tag}"
+    )
+    em.description = "\n".join(lines) or "No data."
+    em.set_footer(text=f"Sorted by {title_mode}  •  api.brawlstars.com")
+
+    await interaction.followup.send(embed=em)
+
+# ══════════════════════════════════════════════════════════
 #  /club  /clubmembers
 # ══════════════════════════════════════════════════════════
 

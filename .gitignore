@@ -5,6 +5,11 @@
 .env.*
 *.env
 
+# ── assets ──────────────────────
+emojis/
+pfp/
+
+
 # ── python cache ──────────────────────
 __pycache__/
 *.pyc
@@ -29,7 +34,7 @@ Thumbs.db
 # ── logs ──────────────────────────────
 *.log
 
-# ── database (your linked tags) ───────
+# ── database (linked tags) ───────
 linked_tags.db
 *.sqlite
 *.db
