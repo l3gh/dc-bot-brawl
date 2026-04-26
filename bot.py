@@ -178,7 +178,7 @@ def _embed(title: str = "", desc: str = "", color: int = BS_BLUE) -> discord.Emb
 
 
 def _err(msg: str) -> discord.Embed:
-    return discord.Embed(description=f"<:cross:1497235501214863522  {msg}", color=BS_RED)
+    return discord.Embed(description=f"<:cross:1497235501214863522>  {msg}", color=BS_RED)
 
 
 def _items(data: dict | list) -> list:
@@ -207,8 +207,8 @@ MODE_EMOJI: dict[str, str] = { # maybe ill go and get emojis for all of them idk
     "duels":         "<:duels:1495582888513638420>",
     "wipeout":       "<:wipeout:1497905333660549240>",
     "payload":       "<:payload:1497905622417412187>",
-    "holdTheTrophy": "<:holdthetrophy:1497239159524294828",
-    "trophyThieves": "<:holdthetrophy:1497239159524294828",
+    "holdTheTrophy": "<:holdthetrophy:1497239159524294828>",
+    "trophyThieves": "<:holdthetrophy:1497239159524294828>",
     "brawlTV":       "<:brawlTV:1495581804327993424>",
     "ranked":        "<:ranked:1495581799441633350>",
     "info":          "<:info:1495581796849553499>",
@@ -256,7 +256,7 @@ ROLE_ORDER: dict[str, int] = {
 }
 
 RESULT_ICON: dict[str, str] = {
-    "victory": "<:check:1497235498668789800>", "defeat": "<:cross:1497235501214863522", "draw": "<:heartfire:1497909601805271180>",
+    "victory": "<:check:1497235498668789800>", "defeat": "<:cross:1497235501214863522>", "draw": "<:heartfire:1497909601805271180>",
 }
 
 
@@ -468,7 +468,7 @@ async def link_cmd(interaction: discord.Interaction, tag: str) -> None:
     em = _embed("<:check:1497235498668789800>  Tag Linked", color=0x2E7D32)
     em.add_field(name="Tag",      value=f"#{clean}",                   inline=True)
     em.add_field(name="Name",     value=p.get("name", "?"),            inline=True)
-    em.add_field(name="Trophies", value=f"{p.get('trophies',0):,} <:trophy:1497229732448829580", inline=True)
+    em.add_field(name="Trophies", value=f"{p.get('trophies',0):,} <:trophy:1497229732448829580>", inline=True)
     await interaction.followup.send(embed=em, ephemeral=True)
 
 
@@ -640,7 +640,7 @@ async def battlelog_cmd(
             res_icon = f"`#{rank}`"
         else:
             res_icon = RESULT_ICON.get(result, "❓")
-        tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}<:trophy:1497229732448829580)" if tc is not None else ""
+        tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}<:trophy:1497229732448829580>)" if tc is not None else ""
         mode_name = MODE_NAME.get(mode, _fmt_mode(mode))
         lines.append(f"{res_icon} {emoji} **{mode_name}** · {label}{tc_str}")
 
@@ -702,7 +702,7 @@ async def brawlers_cmd(
         ht   = b.get("highestTrophies", 0)
         pw   = b.get("power", 0)
         rk   = b.get("rank", 0)
-        lines.append(f"**{name}** — <:trophy:1497229732448829580{tr:,} ↑{ht:,} · P{pw} R{rk}")
+        lines.append(f"**{name}** — <:trophy:1497229732448829580>{tr:,} ↑{ht:,} · P{pw} R{rk}")
 
     em = _embed(f"🥊  Brawlers — {p.get('name','?')} #{bs_tag}")
     em.description = "\n".join(lines) or "No brawlers."
@@ -772,10 +772,10 @@ async def top_cmd(
         name = b.get("name", "?").title()
         tr   = b.get("trophies", 0)
         ht   = b.get("highestTrophies", 0)
-        lines.append(f"`#{i:02}` **{name}** — <:trophy:1497229732448829580 {tr:,} (↑{ht:,})")
+        lines.append(f"`#{i:02}` **{name}** — <:trophy:1497229732448829580> {tr:,} (↑{ht:,})")
 
     em = _embed(
-        f"<:trophy:1497229732448829580 Top {length} Brawlers — {p.get('name','?')} #{bs_tag}"
+        f"<:trophy:1497229732448829580> Top {length} Brawlers — {p.get('name','?')} #{bs_tag}"
     )
     em.description = "\n".join(lines) or "No data."
     em.set_footer(text=f"Sorted by {title_mode}  •  api.brawlstars.com")
@@ -809,7 +809,7 @@ async def _resolve_club_tag(
 )
 @app_commands.describe(
     user="Discord user (uses their linked tag)",
-    tag="Player tag, or club tag prefixed with C: (e.g. C:#XYZ)",
+    tag="Player tag, or club tag prefixed with C: (e.g. C:#8VR800VJL)",
 )
 async def club_cmd(
     interaction: discord.Interaction,
@@ -825,9 +825,9 @@ async def club_cmd(
             await interaction.followup.send(embed=_err(str(e)))
             return
 
-    em = _embed(f"🏠  {club.get('name','?')}", desc=club.get("description",""), color=BS_GOLD)
+    em = _embed(f"<:club:1497225670831374519>  {club.get('name','?')}", desc=club.get("description",""), color=BS_GOLD)
     em.add_field(name="<:tag:1497917332918505492> Tag",          value=f"#{club_tag}",                        inline=True)
-    em.add_field(name="<:trophy:1497229732448829580 Trophies",     value=f"{club.get('trophies',0):,}",         inline=True)
+    em.add_field(name="<:trophy:1497229732448829580> Trophies",     value=f"{club.get('trophies',0):,}",         inline=True)
     em.add_field(name="👥 Members",       value=str(len(club.get("members",[]))),      inline=True)
     em.add_field(name="📋 Type",          value=club.get("type","?").capitalize(),     inline=True)
     em.add_field(name="🔒 Min Trophies",  value=f"{club.get('requiredTrophies',0):,}", inline=True)
@@ -877,7 +877,7 @@ async def clubmembers_cmd(
     lines = []
     for m in members[:30]:
         role_icon = ROLE_EMOJI.get(m.get("role", "member"), "👤")
-        lines.append(f"{role_icon} **{m.get('name','?')}** — <:trophy:1497229732448829580 {m.get('trophies',0):,}")
+        lines.append(f"{role_icon} **{m.get('name','?')}** — <:trophy:1497229732448829580> {m.get('trophies',0):,}")
 
     em = _embed(f"👥  {club.get('name','?')} Members", color=BS_GOLD)
     em.description = "\n".join(lines) or "No members found."
@@ -1023,9 +1023,9 @@ async def rankings_players_cmd(
     lines   = []
     for i, p in enumerate(players, 1):
         club = p.get("club", {}).get("name", "—")
-        lines.append(f"`#{i:02}` **{p['name']}** — <:trophy:1497229732448829580 {p.get('trophies',0):,}  · {club}")
+        lines.append(f"`#{i:02}` **{p['name']}** — <:trophy:1497229732448829580> {p.get('trophies',0):,}  · {club}")
 
-    em = _embed(f"<:trophy:1497229732448829580  Top Players — {code}", color=BS_GOLD)
+    em = _embed(f"<:trophy:1497229732448829580>  Top Players — {code}", color=BS_GOLD)
     em.description = "\n".join(lines) or "No data."
     await interaction.followup.send(embed=em)
 
@@ -1046,7 +1046,7 @@ async def rankings_clubs_cmd(
 
     clubs = _items(data)[:25]
     lines = [
-        f"`#{i:02}` **{c['name']}** — <:trophy:1497229732448829580 {c.get('trophies',0):,}  · 👥 {c.get('memberCount','?')}"
+        f"`#{i:02}` **{c['name']}** — <:trophy:1497229732448829580> {c.get('trophies',0):,}  · 👥 {c.get('memberCount','?')}"
         for i, c in enumerate(clubs, 1)
     ]
     em = _embed(f"<:club:1497225670831374519>  Top Clubs — {code}", color=BS_GOLD)
@@ -1093,7 +1093,7 @@ async def rankings_brawler_cmd(
 
     players = _items(data)[:25]
     lines   = [
-        f"`#{i:02}` **{p['name']}** — <:trophy:1497229732448829580 {p.get('trophies',0):,}"
+        f"`#{i:02}` **{p['name']}** — <:trophy:1497229732448829580> {p.get('trophies',0):,}"
         for i, p in enumerate(players, 1)
     ]
     em = _embed(f"⭐  Top {brawler_name} Players — {code}", color=BS_GOLD)
@@ -1224,15 +1224,15 @@ async def compare_cmd(
     as_, _  = cmp_arrow(s1,  s2)
     ad,  _  = cmp_arrow(d1,  d2)
 
-    em = _embed("⚔️  Player Comparison")
+    em = _embed("<:clubleague:1497914300264878224>  Player Comparison")
     em.add_field(
         name=f"{p1.get('name','?')} #{bs1}",
         value=(
-            f"{at} <:trophy:1497229732448829580 {t1:,}\n"
-            f"{aht} 🔝 {ht1:,}\n"
+            f"{at} <:trophy:1497229732448829580> {t1:,}\n"
+            f"{aht} <:trophyprestige:1497913518912176268> {ht1:,}\n"
             f"{aw} ⚡ 3v3: {w1:,}\n"
-            f"{as_} 🎯 Solo: {s1:,}\n"
-            f"{ad} 💥 Duo:  {d1:,}\n"
+            f"{as_} <:sdwins:1497912798464704533> Solo: {s1:,}\n"
+            f"{ad} <:duowins:1497913079218835496> Duo:  {d1:,}\n"
             f"🥊 {len(p1.get('brawlers',[]))} brawlers"
         ),
         inline=True,
@@ -1241,11 +1241,11 @@ async def compare_cmd(
     em.add_field(
         name=f"{p2.get('name','?')} #{bs2}",
         value=(
-            f"{bt} <:trophy:1497229732448829580 {t2:,}\n"
-            f"{'🔺' if ht2>ht1 else '🔻' if ht1>ht2 else '➖'} 🔝 {ht2:,}\n"
+            f"{bt} <:trophy:1497229732448829580> {t2:,}\n"
+            f"{'🔺' if ht2>ht1 else '🔻' if ht1>ht2 else '➖'} <:trophyprestige:1497913518912176268> {ht2:,}\n"
             f"{'🔺' if w2>w1 else '🔻' if w1>w2 else '➖'} ⚡ 3v3: {w2:,}\n"
-            f"{'🔺' if s2>s1 else '🔻' if s1>s2 else '➖'} 🎯 Solo: {s2:,}\n"
-            f"{'🔺' if d2>d1 else '🔻' if d1>d2 else '➖'} 💥 Duo:  {d2:,}\n"
+            f"{'🔺' if s2>s1 else '🔻' if s1>s2 else '➖'} <:sdwins:1497912798464704533> Solo: {s2:,}\n"
+            f"{'🔺' if d2>d1 else '🔻' if d1>d2 else '➖'} <:duowins:1497913079218835496> Duo:  {d2:,}\n"
             f"🥊 {len(p2.get('brawlers',[]))} brawlers"
         ),
         inline=True,
@@ -1308,7 +1308,7 @@ async def stats_cmd(
     em.add_field(name="⚡ 3v3 Wins",     value=f"{p.get('3vs3Victories',0):,}",   inline=True)
     em.add_field(name="<:sdwins:1497912798464704533>",    value=f"{p.get('soloVictories',0):,}",   inline=True)
     if p.get("club"):
-        em.add_field(name="🏠 Club", value=p["club"].get("name","?"), inline=False)
+        em.add_field(name="<:club:1497225670831374519> Club", value=p["club"].get("name","?"), inline=False)
     await interaction.followup.send(embed=em)
 
 
@@ -1319,7 +1319,7 @@ async def stats_cmd(
 
 @bot.tree.command(
     name="trophygraph",
-    description="Trophy progress chart built from the last 25 ranked battles.",
+    description="Trophy progress chart built from the last 25 ladder battles.",
 )
 @app_commands.describe(
     user="Discord user (uses their linked tag)",
@@ -1362,7 +1362,7 @@ async def trophygraph_cmd(
         )
         em = _embed("No Ranked Battles Found", color=0xF57C00)
         em.description = (
-            f"Only **{ranked_count}** ranked battle(s) in the last 25 games "
+            f"Only **{ranked_count}** ladder battle(s) in the last 25 games "
             f"(need at least 2 with trophy changes).\n\n"
             f"Friendly, special event, and Power League battles are excluded.\n\n"
             f"Current trophies: **{current_trophies:,}** <:trophy:1497229732448829580"
@@ -1383,10 +1383,10 @@ async def trophygraph_cmd(
     sign      = "+" if delta_val >= 0 else ""
     em = discord.Embed(
         title=f"<:trophy:1497229732448829580  {player_name}  •  #{bs_tag}",
-        description=f"{sign}{delta_val:,} trophies over last **{ranked_count}** ranked battles",
+        description=f"{sign}{delta_val:,} trophies over last **{ranked_count}** ladder battles",
         color=0xF7C948,
     )
-    em.set_footer(text="Reconstructed from battle log trophyChange values  •  api.brawlstars.com")
+    em.set_footer(text="Reconstructed from battle log  •  api.brawlstars.com")
 
     file = discord.File(buf, filename="trophy_graph.png")
     em.set_image(url="attachment://trophy_graph.png")
