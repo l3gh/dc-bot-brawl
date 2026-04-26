@@ -140,7 +140,7 @@ async def on_ready() -> None:
     else:
         await bot.tree.sync()
         print("✅ Synced global slash commands (may take up to 1 h to propagate).")
-    print(f"🎮 Logged in as {bot.user} ({bot.user.id})")
+    print(f"Sucessfully logged in as {bot.user} ({bot.user.id})")
 
 
 # ══════════════════════════════════════════════════════════
@@ -178,7 +178,7 @@ def _embed(title: str = "", desc: str = "", color: int = BS_BLUE) -> discord.Emb
 
 
 def _err(msg: str) -> discord.Embed:
-    return discord.Embed(description=f"❌  {msg}", color=BS_RED)
+    return discord.Embed(description=f"<:cross:1497235501214863522  {msg}", color=BS_RED)
 
 
 def _items(data: dict | list) -> list:
@@ -193,22 +193,22 @@ MODE_EMOJI: dict[str, str] = { # maybe ill go and get emojis for all of them idk
     "brawlBall":     "<:brawlball:1495579359845679215>",
     "bounty":        "<:bounty:1495581805762449669>",
     "heist":         "<:heist:1495579845499949146>",
-    "siege":         "🤖",
+    "siege":         "<:siege:1497239492661346504>",
     "hotZone":       "<:hotzone:1495579847131398294>",
     "knockout":      "<:knockout:1495579842505085028>",
     "basketBrawl":   "<:basketbrawl:1495571795553513472>",
-    "volleyBrawl":   "🏐",
+    "volleyBrawl":   "<:volleybrawl:1497904782835318884>",
     "duoShowdown":   "<:duoSD:1495579852282007633>",
     "soloShowdown":  "<:soloSD:1495579853993410683>",
     "trioShowdown":  "<:trioSD:1495579850264805487>",
-    "superCity":     "🦸",
-    "roboRumble":    "⚙️",
+    "superCity":     "<:supercityrampage:1497229696067174400>",
+    "roboRumble":    "<:roborumble:1497229699603103854>",
     "bigGame":       "<:biggame:1495581801643642980>",
     "duels":         "<:duels:1495582888513638420>",
-    "wipeout":       "💨",
-    "payload":       "📦",
-    "holdTheTrophy": "🏆",
-    "trophyThieves": "🎭",
+    "wipeout":       "<:wipeout:1497905333660549240>",
+    "payload":       "<:payload:1497905622417412187>",
+    "holdTheTrophy": "<:holdthetrophy:1497239159524294828",
+    "trophyThieves": "<:holdthetrophy:1497239159524294828",
     "brawlTV":       "<:brawlTV:1495581804327993424>",
     "ranked":        "<:ranked:1495581799441633350>",
     "info":          "<:info:1495581796849553499>",
@@ -246,17 +246,17 @@ MODE_NAME: dict[str, str] = {
 }
 
 ROLE_EMOJI: dict[str, str] = {
-    "president":     "👑",
-    "vicePresident": "🥈",
-    "senior":        "⭐",
-    "member":        "👤",
+    "president":     "<:clmasters:1497908243756875856>",
+    "vicePresident": "<:cldiamond3:1497908231232684114>",
+    "senior":        "<:clgold2:1497908224320471081>",
+    "member":        "<:clsilver1:1497908217299341432>",
 }
 ROLE_ORDER: dict[str, int] = {
     "president": 0, "vicePresident": 1, "senior": 2, "member": 3,
 }
 
 RESULT_ICON: dict[str, str] = {
-    "victory": "✅", "defeat": "❌", "draw": "🤝",
+    "victory": "<:check:1497235498668789800>", "defeat": "<:cross:1497235501214863522", "draw": "<:heartfire:1497909601805271180>",
 }
 
 
@@ -465,10 +465,10 @@ async def link_cmd(interaction: discord.Interaction, tag: str) -> None:
             )
             return
     db_set(interaction.user.id, clean)
-    em = _embed("✅  Tag Linked", color=0x2E7D32)
+    em = _embed("<:check:1497235498668789800>  Tag Linked", color=0x2E7D32)
     em.add_field(name="Tag",      value=f"#{clean}",                   inline=True)
     em.add_field(name="Name",     value=p.get("name", "?"),            inline=True)
-    em.add_field(name="Trophies", value=f"{p.get('trophies',0):,} 🏆", inline=True)
+    em.add_field(name="Trophies", value=f"{p.get('trophies',0):,} <:trophy:1497229732448829580", inline=True)
     await interaction.followup.send(embed=em, ephemeral=True)
 
 
@@ -481,7 +481,7 @@ async def unlink_cmd(interaction: discord.Interaction) -> None:
         return
     db_delete(interaction.user.id)
     await interaction.response.send_message(
-        embed=discord.Embed(description="✅  Tag unlinked.", color=0x2E7D32),
+        embed=discord.Embed(description="<:check:1497235498668789800>  Tag unlinked.", color=0x2E7D32),
         ephemeral=True,
     )
 
@@ -549,17 +549,17 @@ async def profile_cmd(
 
     club = p.get("club", {})
     em   = _embed(f"{p.get('name','?')}  •  #{bs_tag}")
-    em.add_field(name="🏆 Trophies",        value=f"{p.get('trophies',0):,}",          inline=True)
-    em.add_field(name="🔝 Best Ever",        value=f"{p.get('highestTrophies',0):,}",   inline=True)
-    em.add_field(name="📈 Exp Level",        value=str(p.get("expLevel", "?")),         inline=True)
+    em.add_field(name="<:trophy:1497229732448829580> Trophies",        value=f"{p.get('trophies',0):,}",          inline=True)
+    em.add_field(name="<:trophyprestige:1497913518912176268> Best Ever",        value=f"{p.get('highestTrophies',0):,}",   inline=True)
+    em.add_field(name="<:experience:1497229724752285779> Exp Level",        value=str(p.get("expLevel", "?")),         inline=True)
     em.add_field(name="⚡ 3v3 Wins",         value=f"{p.get('3vs3Victories',0):,}",     inline=True)
-    em.add_field(name="🎯 Solo Wins",        value=f"{p.get('soloVictories',0):,}",     inline=True)
-    em.add_field(name="💥 Duo Wins",         value=f"{p.get('duoVictories',0):,}",      inline=True)
+    em.add_field(name="<:sdwins:1497912798464704533> Solo Wins",        value=f"{p.get('soloVictories',0):,}",     inline=True)
+    em.add_field(name="<:duowins:1497913079218835496> Duo Wins",         value=f"{p.get('duoVictories',0):,}",      inline=True)
     em.add_field(name="🥊 Brawlers",         value=str(len(p.get("brawlers", []))),     inline=True)
-    em.add_field(name="🤖 Best Robo Time",   value=str(p.get("bestRoboRumbleTime", 0)), inline=True)
-    em.add_field(name="👾 Best Big Brawler", value=str(p.get("bestTimeAsBigBrawler",0)),inline=True)
+    # em.add_field(name="🤖 Best Robo Time",   value=str(p.get("bestRoboRumbleTime", 0)), inline=True)
+    # em.add_field(name="👾 Best Big Brawler", value=str(p.get("bestTimeAsBigBrawler",0)),inline=True)
     if club:
-        em.add_field(name="🏠 Club", value=club.get("name", "?"), inline=False)
+        em.add_field(name="<:club:1497225670831374519> Club", value=club.get("name", "?"), inline=False)
     await interaction.followup.send(embed=em)
 
 
@@ -640,11 +640,11 @@ async def battlelog_cmd(
             res_icon = f"`#{rank}`"
         else:
             res_icon = RESULT_ICON.get(result, "❓")
-        tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}🏆)" if tc is not None else ""
+        tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}<:trophy:1497229732448829580)" if tc is not None else ""
         mode_name = MODE_NAME.get(mode, _fmt_mode(mode))
         lines.append(f"{res_icon} {emoji} **{mode_name}** · {label}{tc_str}")
 
-    em = _embed(f"⚔️  Battle Log — {p.get('name','?')} #{bs_tag}")
+    em = _embed(f"<:clubleague:1497914300264878224>  Battle Log — {p.get('name','?')} #{bs_tag}")
     em.description = "\n".join(lines)
     em.set_footer(text=f"Last {len(battles)} battles  •  api.brawlstars.com")
     await interaction.followup.send(embed=em)
@@ -702,7 +702,7 @@ async def brawlers_cmd(
         ht   = b.get("highestTrophies", 0)
         pw   = b.get("power", 0)
         rk   = b.get("rank", 0)
-        lines.append(f"**{name}** — 🏆{tr:,} ↑{ht:,} · P{pw} R{rk}")
+        lines.append(f"**{name}** — <:trophy:1497229732448829580{tr:,} ↑{ht:,} · P{pw} R{rk}")
 
     em = _embed(f"🥊  Brawlers — {p.get('name','?')} #{bs_tag}")
     em.description = "\n".join(lines) or "No brawlers."
@@ -772,10 +772,10 @@ async def top_cmd(
         name = b.get("name", "?").title()
         tr   = b.get("trophies", 0)
         ht   = b.get("highestTrophies", 0)
-        lines.append(f"`#{i:02}` **{name}** — 🏆 {tr:,} (↑{ht:,})")
+        lines.append(f"`#{i:02}` **{name}** — <:trophy:1497229732448829580 {tr:,} (↑{ht:,})")
 
     em = _embed(
-        f"🏆 Top {length} Brawlers — {p.get('name','?')} #{bs_tag}"
+        f"<:trophy:1497229732448829580 Top {length} Brawlers — {p.get('name','?')} #{bs_tag}"
     )
     em.description = "\n".join(lines) or "No data."
     em.set_footer(text=f"Sorted by {title_mode}  •  api.brawlstars.com")
@@ -826,8 +826,8 @@ async def club_cmd(
             return
 
     em = _embed(f"🏠  {club.get('name','?')}", desc=club.get("description",""), color=BS_GOLD)
-    em.add_field(name="🏷️ Tag",          value=f"#{club_tag}",                        inline=True)
-    em.add_field(name="🏆 Trophies",     value=f"{club.get('trophies',0):,}",         inline=True)
+    em.add_field(name="<:tag:1497917332918505492> Tag",          value=f"#{club_tag}",                        inline=True)
+    em.add_field(name="<:trophy:1497229732448829580 Trophies",     value=f"{club.get('trophies',0):,}",         inline=True)
     em.add_field(name="👥 Members",       value=str(len(club.get("members",[]))),      inline=True)
     em.add_field(name="📋 Type",          value=club.get("type","?").capitalize(),     inline=True)
     em.add_field(name="🔒 Min Trophies",  value=f"{club.get('requiredTrophies',0):,}", inline=True)
@@ -877,7 +877,7 @@ async def clubmembers_cmd(
     lines = []
     for m in members[:30]:
         role_icon = ROLE_EMOJI.get(m.get("role", "member"), "👤")
-        lines.append(f"{role_icon} **{m.get('name','?')}** — 🏆 {m.get('trophies',0):,}")
+        lines.append(f"{role_icon} **{m.get('name','?')}** — <:trophy:1497229732448829580 {m.get('trophies',0):,}")
 
     em = _embed(f"👥  {club.get('name','?')} Members", color=BS_GOLD)
     em.description = "\n".join(lines) or "No members found."
@@ -903,7 +903,7 @@ async def events_cmd(interaction: discord.Interaction) -> None:
             return
 
     events = data if isinstance(data, list) else data.get("items", [])
-    em = _embed("📅  Current Event Rotation", color=0x6A1B9A)
+    em = _embed("<:calendar:1497229708998475866>  Current Event Rotation", color=0x6A1B9A)
     for ev in events:
         event    = ev.get("event", {})
         slot     = ev.get("slotId", "?")
@@ -919,7 +919,7 @@ async def events_cmd(interaction: discord.Interaction) -> None:
             end_str = "?"
         em.add_field(
             name=f"{emoji}  Slot {slot} — {MODE_NAME.get(mode, _fmt_mode(mode))}",
-            value=f"🗺️ {map_name}\n⏰ {end_str}",
+            value=f"<:mapmaker:1497229729944571984> {map_name}\n<:time:1497918238439374888> {end_str}",
             inline=True,
         )
     if not events:
@@ -985,14 +985,14 @@ async def brawlerinfo_cmd(interaction: discord.Interaction, name: str) -> None:
     sps = match.get("starPowers", [])
     if sps:
         em.add_field(
-            name=f"⭐ Star Powers ({len(sps)})",
+            name=f"<:starpower:1497919181537148948> Star Powers ({len(sps)})",
             value="\n".join(f"• {sp['name']} (ID {sp['id']})" for sp in sps) or "—",
             inline=False,
         )
     gadgets = match.get("gadgets", [])
     if gadgets:
         em.add_field(
-            name=f"🔧 Gadgets ({len(gadgets)})",
+            name=f"<:gadget:1497919179641061576> Gadgets ({len(gadgets)})",
             value="\n".join(f"• {g['name']} (ID {g['id']})" for g in gadgets) or "—",
             inline=False,
         )
@@ -1023,9 +1023,9 @@ async def rankings_players_cmd(
     lines   = []
     for i, p in enumerate(players, 1):
         club = p.get("club", {}).get("name", "—")
-        lines.append(f"`#{i:02}` **{p['name']}** — 🏆 {p.get('trophies',0):,}  · {club}")
+        lines.append(f"`#{i:02}` **{p['name']}** — <:trophy:1497229732448829580 {p.get('trophies',0):,}  · {club}")
 
-    em = _embed(f"🏆  Top Players — {code}", color=BS_GOLD)
+    em = _embed(f"<:trophy:1497229732448829580  Top Players — {code}", color=BS_GOLD)
     em.description = "\n".join(lines) or "No data."
     await interaction.followup.send(embed=em)
 
@@ -1046,10 +1046,10 @@ async def rankings_clubs_cmd(
 
     clubs = _items(data)[:25]
     lines = [
-        f"`#{i:02}` **{c['name']}** — 🏆 {c.get('trophies',0):,}  · 👥 {c.get('memberCount','?')}"
+        f"`#{i:02}` **{c['name']}** — <:trophy:1497229732448829580 {c.get('trophies',0):,}  · 👥 {c.get('memberCount','?')}"
         for i, c in enumerate(clubs, 1)
     ]
-    em = _embed(f"🏠  Top Clubs — {code}", color=BS_GOLD)
+    em = _embed(f"<:club:1497225670831374519>  Top Clubs — {code}", color=BS_GOLD)
     em.description = "\n".join(lines) or "No data."
     await interaction.followup.send(embed=em)
 
@@ -1093,7 +1093,7 @@ async def rankings_brawler_cmd(
 
     players = _items(data)[:25]
     lines   = [
-        f"`#{i:02}` **{p['name']}** — 🏆 {p.get('trophies',0):,}"
+        f"`#{i:02}` **{p['name']}** — <:trophy:1497229732448829580 {p.get('trophies',0):,}"
         for i, p in enumerate(players, 1)
     ]
     em = _embed(f"⭐  Top {brawler_name} Players — {code}", color=BS_GOLD)
@@ -1228,7 +1228,7 @@ async def compare_cmd(
     em.add_field(
         name=f"{p1.get('name','?')} #{bs1}",
         value=(
-            f"{at} 🏆 {t1:,}\n"
+            f"{at} <:trophy:1497229732448829580 {t1:,}\n"
             f"{aht} 🔝 {ht1:,}\n"
             f"{aw} ⚡ 3v3: {w1:,}\n"
             f"{as_} 🎯 Solo: {s1:,}\n"
@@ -1241,7 +1241,7 @@ async def compare_cmd(
     em.add_field(
         name=f"{p2.get('name','?')} #{bs2}",
         value=(
-            f"{bt} 🏆 {t2:,}\n"
+            f"{bt} <:trophy:1497229732448829580 {t2:,}\n"
             f"{'🔺' if ht2>ht1 else '🔻' if ht1>ht2 else '➖'} 🔝 {ht2:,}\n"
             f"{'🔺' if w2>w1 else '🔻' if w1>w2 else '➖'} ⚡ 3v3: {w2:,}\n"
             f"{'🔺' if s2>s1 else '🔻' if s1>s2 else '➖'} 🎯 Solo: {s2:,}\n"
@@ -1298,15 +1298,15 @@ async def stats_cmd(
     )
 
     em = _embed(f"📊  Quick Stats — {p.get('name','?')} #{bs_tag}")
-    em.add_field(name="🏆 Trophies",     value=f"{p.get('trophies',0):,}",       inline=True)
-    em.add_field(name="🔝 Best Ever",    value=f"{p.get('highestTrophies',0):,}", inline=True)
-    em.add_field(name="🎖️ Exp Level",   value=str(p.get("expLevel","?")),        inline=True)
+    em.add_field(name="<:trophy:1497229732448829580 Trophies",     value=f"{p.get('trophies',0):,}",       inline=True)
+    em.add_field(name="<:trophyprestige:1497913518912176268> Best Ever",    value=f"{p.get('highestTrophies',0):,}", inline=True)
+    em.add_field(name="<:experience:1497229724752285779> Exp Level",   value=str(p.get("expLevel","?")),        inline=True)
     em.add_field(name="🥊 Brawlers",     value=str(len(brawlers)),                inline=True)
     em.add_field(name="⚡ P9+ Brawlers", value=str(max_p9),                       inline=True)
     em.add_field(name="💎 Max (P11)",    value=str(max_p11),                      inline=True)
     em.add_field(name="🎯 Total Wins",   value=f"{total_wins:,}",                 inline=True)
     em.add_field(name="⚡ 3v3 Wins",     value=f"{p.get('3vs3Victories',0):,}",   inline=True)
-    em.add_field(name="👤 Solo Wins",    value=f"{p.get('soloVictories',0):,}",   inline=True)
+    em.add_field(name="<:sdwins:1497912798464704533>",    value=f"{p.get('soloVictories',0):,}",   inline=True)
     if p.get("club"):
         em.add_field(name="🏠 Club", value=p["club"].get("name","?"), inline=False)
     await interaction.followup.send(embed=em)
@@ -1365,7 +1365,7 @@ async def trophygraph_cmd(
             f"Only **{ranked_count}** ranked battle(s) in the last 25 games "
             f"(need at least 2 with trophy changes).\n\n"
             f"Friendly, special event, and Power League battles are excluded.\n\n"
-            f"Current trophies: **{current_trophies:,}** 🏆"
+            f"Current trophies: **{current_trophies:,}** <:trophy:1497229732448829580"
         )
         await interaction.followup.send(embed=em)
         return
@@ -1382,7 +1382,7 @@ async def trophygraph_cmd(
     delta_val = history[-1] - history[0]
     sign      = "+" if delta_val >= 0 else ""
     em = discord.Embed(
-        title=f"🏆  {player_name}  •  #{bs_tag}",
+        title=f"<:trophy:1497229732448829580  {player_name}  •  #{bs_tag}",
         description=f"{sign}{delta_val:,} trophies over last **{ranked_count}** ranked battles",
         color=0xF7C948,
     )
@@ -1401,5 +1401,5 @@ async def trophygraph_cmd(
 if __name__ == "__main__":
     missing = [k for k, v in {"DISCORD_TOKEN": DISCORD_TOKEN, "BS_API_KEY": BS_API_KEY}.items() if not v]
     if missing:
-        raise SystemExit(f"❌  Missing environment variables: {', '.join(missing)}")
+        raise SystemExit(f"<:warn:1497917334722052136>  Missing environment variables: {', '.join(missing)}")
     bot.run(DISCORD_TOKEN)
