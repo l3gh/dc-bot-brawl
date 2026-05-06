@@ -611,23 +611,37 @@ async def battlelog_cmd(
         result = battle.get("result")
  
         all_entries: list[dict] = []
-        all_entries.extend(battle.get("players", []))
-        for team in battle.get("teams", []):
-            all_entries.extend(team)
+
+        players = battle.get("players") or []
+        teams   = battle.get("teams") or []
+
+        all_entries.extend(players)
+
+        for team in teams:
+            if isinstance(team, list):
+                all_entries.extend(team)
+            elif isinstance(team, dict):
+                all_entries.extend(team.get("players", []))
  
         rank    = battle.get("rank")
         tc      = battle.get("trophyChange")
         brawler = None
         for entry in all_entries:
-            if _norm(entry.get("tag", "")) == bs_tag:
+            entry_tag = entry.get("tag")
+            if not entry_tag:
+                continue
+
+            if _norm(entry_tag) == bs_tag:
                 if rank is None:
                     rank = entry.get("rank")
                 if tc is None:
                     tc = entry.get("trophyChange")
-                brawler = entry.get("brawler", {}).get("name")
+                brawler_data = entry.get("brawler")
+                if isinstance(brawler_data, dict):
+                    brawler = brawler_data.get("name")
                 break
 
-        label     = brawler.title() if brawler else "?"
+        label     = (brawler or "Unknown <:warn:1497917334722052136>").title()
         emoji     = MODE_EMOJI.get(mode, "🎮")
         res_icon  = f"`#{rank}`" if rank is not None else RESULT_ICON.get(result, "❓")
         tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}<:trophy:1497229732448829580>)" if tc is not None else ""
