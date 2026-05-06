@@ -2,7 +2,6 @@
 """
 ╔══════════════════════════════════════════════════════════╗
 ║           Brawl Stars Discord Bot  —  bot.py             ║
-║   Full API coverage · Tag linking · Trophy graph         ║
 ╚══════════════════════════════════════════════════════════╝    
 """
 
@@ -126,21 +125,25 @@ async def bs_get(session: aiohttp.ClientSession, path: str) -> dict | list:
 # ══════════════════════════════════════════════════════════
 
 intents = discord.Intents.default()
-bot     = commands.Bot(command_prefix="bs!", intents=intents)
+bot = commands.Bot(
+    command_prefix="bs!",
+    intents=intents,
+    allowed_contexts=discord.app_commands.AppCommandContext.all(),
+    allowed_installs=discord.app_commands.AppInstallationType.all(),
+)
 
 
 @bot.event
 async def on_ready() -> None:
     db_init()
-    if GUILD_ID:
-        guild = discord.Object(id=GUILD_ID)
-        bot.tree.copy_global_to(guild=guild)
-        await bot.tree.sync(guild=guild)
-        print(f"✅ Synced slash commands to guild {GUILD_ID}.")
-    else:
-        await bot.tree.sync()
-        print("✅ Synced global slash commands (may take up to 1 h to propagate).")
-    print(f"Sucessfully logged in as {bot.user} ({bot.user.id})")
+
+    try:
+        synced = await bot.tree.sync()
+        print(f"✅ Synced {len(synced)} global commands.")
+    except Exception as e:
+        print(f"Sync failed: {e}")
+
+    print(f"Successfully logged in as {bot.user} ({bot.user.id})")
 
 
 # ══════════════════════════════════════════════════════════
@@ -150,7 +153,7 @@ async def on_ready() -> None:
 
 async def resolve_tag(
     interaction: discord.Interaction,
-    user: discord.Member | None,
+    user: discord.User | None,
     tag: str | None,
 ) -> str:
     """
@@ -504,7 +507,7 @@ async def whoami_cmd(interaction: discord.Interaction) -> None:
 
 @bot.tree.command(name="tagof", description="See which Brawl Stars tag another Discord user has linked.")
 @app_commands.describe(user="The Discord user to look up")
-async def tagof_cmd(interaction: discord.Interaction, user: discord.Member) -> None:
+async def tagof_cmd(interaction: discord.Interaction, user: discord.User) -> None:
     tag = db_get(user.id)
     if not tag:
         await interaction.response.send_message(
@@ -530,7 +533,7 @@ async def tagof_cmd(interaction: discord.Interaction, user: discord.Member) -> N
 )
 async def profile_cmd(
     interaction: discord.Interaction,
-    user: discord.Member | None = None,
+    user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
     await interaction.response.defer()
@@ -571,12 +574,12 @@ async def profile_cmd(
 @bot.tree.command(name="battlelog", description="Recent battle log for a player.")
 @app_commands.describe(
     user="Discord user (uses their linked tag)",
-    tag="Explicit Brawl Stars player tag",
+    tag="Explicit player tag",
     count="Battles to show (1–25, default 15)",
 )
 async def battlelog_cmd(
     interaction: discord.Interaction,
-    user: discord.Member | None = None,
+    user: discord.User | None = None,
     tag: str | None = None,
     count: app_commands.Range[int, 1, 25] = 15,
 ) -> None:
@@ -586,7 +589,7 @@ async def battlelog_cmd(
     except ValueError as e:
         await interaction.followup.send(embed=_err(str(e)))
         return
-
+ 
     async with aiohttp.ClientSession() as s:
         try:
             log_data, p = await asyncio.gather(
@@ -596,25 +599,28 @@ async def battlelog_cmd(
         except BSError as e:
             await interaction.followup.send(embed=_err(f"API {e.status}: {e.message}"))
             return
-
+ 
     battles = _items(log_data)[:count]
     if not battles:
         await interaction.followup.send(embed=_err("No recent battles found."))
         return
-
+ 
     lines: list[str] = []
     for b in battles:
-        event    = b.get("event", {})
-        battle   = b.get("battle", {})
-        mode     = event.get("mode", "unknown")
-        map_name = event.get("map", "?")
-        result   = battle.get("result")
-        # rank & trophyChange: top-level for showdown, but may also live
-        # inside battle.players (solo SD) or battle.teams (3v3/duo SD)
-        rank     = battle.get("rank")
-        tc       = battle.get("trophyChange")
-        brawler  = None
-        for entry in battle.get("players", []):
+        event  = b.get("event", {})
+        battle = b.get("battle", {})
+        mode   = event.get("mode", "unknown")
+        result = battle.get("result")
+ 
+        all_entries: list[dict] = []
+        all_entries.extend(battle.get("players", []))
+        for team in battle.get("teams", []):
+            all_entries.extend(team)
+ 
+        rank    = battle.get("rank")
+        tc      = battle.get("trophyChange")
+        brawler = None
+        for entry in all_entries:
             if _norm(entry.get("tag", "")) == bs_tag:
                 if rank is None:
                     rank = entry.get("rank")
@@ -622,32 +628,19 @@ async def battlelog_cmd(
                     tc = entry.get("trophyChange")
                 brawler = entry.get("brawler", {}).get("name")
                 break
-        if brawler is None:
-            for team in battle.get("teams", []):
-                for entry in team:
-                    if _norm(entry.get("tag", "")) == bs_tag:
-                        if rank is None:
-                            rank = entry.get("rank")
-                        if tc is None:
-                            tc = entry.get("trophyChange")
-                        brawler = entry.get("brawler", {}).get("name")
-                        break
-                if brawler is not None or tc is not None or rank is not None:
-                    break
-        label    = brawler.title() if brawler else map_name
-        emoji    = MODE_EMOJI.get(mode, "🎮")
-        if rank is not None:
-            res_icon = f"`#{rank}`"
-        else:
-            res_icon = RESULT_ICON.get(result, "❓")
+
+        label     = brawler.title() if brawler else "?"
+        emoji     = MODE_EMOJI.get(mode, "🎮")
+        res_icon  = f"`#{rank}`" if rank is not None else RESULT_ICON.get(result, "❓")
         tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}<:trophy:1497229732448829580>)" if tc is not None else ""
         mode_name = MODE_NAME.get(mode, _fmt_mode(mode))
         lines.append(f"{res_icon} {emoji} **{mode_name}** · {label}{tc_str}")
-
-    em = _embed(f"<:clubleague:1497914300264878224>  Battle Log — {p.get('name','?')} #{bs_tag}")
+ 
+    em = _embed(f"<:mapmaker:1497229729944571984>  Battle Log — {p.get('name','?')} #{bs_tag}")
     em.description = "\n".join(lines)
     em.set_footer(text=f"Last {len(battles)} battles  •  api.brawlstars.com")
     await interaction.followup.send(embed=em)
+
 
 
 # ══════════════════════════════════════════════════════════
@@ -658,7 +651,7 @@ async def battlelog_cmd(
 @bot.tree.command(name="brawlers", description="List all brawlers owned by a player.")
 @app_commands.describe(
     user="Discord user (uses their linked tag)",
-    tag="Explicit Brawl Stars player tag",
+    tag="Explicit player tag",
     sort="Sort field",
 )
 @app_commands.choices(sort=[
@@ -670,7 +663,7 @@ async def battlelog_cmd(
 ])
 async def brawlers_cmd(
     interaction: discord.Interaction,
-    user: discord.Member | None = None,
+    user: discord.User | None = None,
     tag: str | None = None,
     sort: str = "trophies",
 ) -> None:
@@ -720,7 +713,7 @@ async def brawlers_cmd(
     length="How many entries to show",
     mode="Sort by current or peak",
     user="Discord user (uses their linked tag)",
-    tag="Explicit Brawl Stars player tag",
+    tag="Explicit player tag",
 )
 @app_commands.choices(
     length=[
@@ -737,7 +730,7 @@ async def top_cmd(
     interaction: discord.Interaction,
     length: int = 10,
     mode: str = "current",
-    user: discord.Member | None = None,
+    user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
     await interaction.response.defer()
@@ -790,7 +783,7 @@ async def top_cmd(
 async def _resolve_club_tag(
     interaction: discord.Interaction,
     session: aiohttp.ClientSession,
-    user: discord.Member | None,
+    user: discord.User | None,
     tag: str | None,
 ) -> str:
     if tag and tag.upper().startswith("C:"):
@@ -813,7 +806,7 @@ async def _resolve_club_tag(
 )
 async def club_cmd(
     interaction: discord.Interaction,
-    user: discord.Member | None = None,
+    user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
     await interaction.response.defer()
@@ -850,7 +843,7 @@ async def club_cmd(
 ])
 async def clubmembers_cmd(
     interaction: discord.Interaction,
-    user: discord.Member | None = None,
+    user: discord.User | None = None,
     tag: str | None = None,
     sort: str = "trophies",
 ) -> None:
@@ -1101,7 +1094,7 @@ async def rankings_brawler_cmd(
     await interaction.followup.send(embed=em)
 
 
-@bot.tree.command(name="powerplay_seasons", description="List all Power Play seasons for a country.")
+@bot.tree.command(name="powerplay_seasons", description="[DOESNT WORK RIGHT NOW!]List all Power Play seasons for a country.")
 @app_commands.describe(country="2-letter country code or 'global'")
 async def powerplay_seasons_cmd(
     interaction: discord.Interaction, country: str = "global"
@@ -1132,7 +1125,7 @@ async def powerplay_seasons_cmd(
     await interaction.followup.send(embed=em)
 
 
-@bot.tree.command(name="powerplay_season", description="Top players for a specific Power Play season.")
+@bot.tree.command(name="powerplay_season", description="[DOESNT WORK RIGHT NOW!]Top players for a specific Power Play season.")
 @app_commands.describe(
     season_id="Season ID (see /powerplay_seasons)",
     country="2-letter country code or 'global'",
@@ -1175,8 +1168,8 @@ async def compare_cmd(
     interaction: discord.Interaction,
     tag1: str | None = None,
     tag2: str | None = None,
-    user1: discord.Member | None = None,
-    user2: discord.Member | None = None,
+    user1: discord.User | None = None,
+    user2: discord.User | None = None,
 ) -> None:
     await interaction.response.defer()
 
@@ -1271,7 +1264,7 @@ async def compare_cmd(
 )
 async def stats_cmd(
     interaction: discord.Interaction,
-    user: discord.Member | None = None,
+    user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
     await interaction.response.defer()
@@ -1298,7 +1291,7 @@ async def stats_cmd(
     )
 
     em = _embed(f"📊  Quick Stats — {p.get('name','?')} #{bs_tag}")
-    em.add_field(name="<:trophy:1497229732448829580 Trophies",     value=f"{p.get('trophies',0):,}",       inline=True)
+    em.add_field(name="<:trophy:1497229732448829580> Trophies",     value=f"{p.get('trophies',0):,}",       inline=True)
     em.add_field(name="<:trophyprestige:1497913518912176268> Best Ever",    value=f"{p.get('highestTrophies',0):,}", inline=True)
     em.add_field(name="<:experience:1497229724752285779> Exp Level",   value=str(p.get("expLevel","?")),        inline=True)
     em.add_field(name="🥊 Brawlers",     value=str(len(brawlers)),                inline=True)
@@ -1327,7 +1320,7 @@ async def stats_cmd(
 )
 async def trophygraph_cmd(
     interaction: discord.Interaction,
-    user: discord.Member | None = None,
+    user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
     await interaction.response.defer()
@@ -1365,7 +1358,7 @@ async def trophygraph_cmd(
             f"Only **{ranked_count}** ladder battle(s) in the last 25 games "
             f"(need at least 2 with trophy changes).\n\n"
             f"Friendly, special event, and Power League battles are excluded.\n\n"
-            f"Current trophies: **{current_trophies:,}** <:trophy:1497229732448829580"
+            f"Current trophies: **{current_trophies:,}** <:trophy:1497229732448829580>"
         )
         await interaction.followup.send(embed=em)
         return
@@ -1382,7 +1375,7 @@ async def trophygraph_cmd(
     delta_val = history[-1] - history[0]
     sign      = "+" if delta_val >= 0 else ""
     em = discord.Embed(
-        title=f"<:trophy:1497229732448829580  {player_name}  •  #{bs_tag}",
+        title=f"<:trophy:1497229732448829580>  {player_name}  •  #{bs_tag}",
         description=f"{sign}{delta_val:,} trophies over last **{ranked_count}** ladder battles",
         color=0xF7C948,
     )
