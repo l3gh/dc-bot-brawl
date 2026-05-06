@@ -642,8 +642,16 @@ async def battlelog_cmd(
                 if tc is None:
                     tc = entry.get("trophyChange")
                 brawler_data = entry.get("brawler")
+                brawlers_data = entry.get("brawlers")  # duels only
+
                 if isinstance(brawler_data, dict):
                     brawler = brawler_data.get("name")
+                    if tc is None:
+                        tc = entry.get("trophyChange")
+                elif isinstance(brawlers_data, list) and brawlers_data:
+                    brawler = brawlers_data[0].get("name")  # first brawler played
+                    if tc is None:
+                        tc = sum(b.get("trophyChange", 0) for b in brawlers_data)
                 break
 
         label     = (brawler or "brawler error <:warn:1497917334722052136>").title()
