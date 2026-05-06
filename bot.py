@@ -622,7 +622,7 @@ async def battlelog_cmd(
                 all_entries.extend(team)
             elif isinstance(team, dict):
                 all_entries.extend(team.get("players", []))
-print(all_entries) #temporary
+        print(all_entries) #temporary
         rank    = battle.get("rank")
         tc      = battle.get("trophyChange")
         brawler = None
