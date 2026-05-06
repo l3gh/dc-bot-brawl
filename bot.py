@@ -641,11 +641,11 @@ async def battlelog_cmd(
                     brawler = brawler_data.get("name")
                 break
 
-        label     = (brawler or "Unknown <:warn:1497917334722052136>").title()
+        label     = (brawler or "brawler error <:warn:1497917334722052136>").title()
         emoji     = MODE_EMOJI.get(mode, "🎮")
         res_icon  = f"`#{rank}`" if rank is not None else RESULT_ICON.get(result, "❓")
         tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}<:trophy:1497229732448829580>)" if tc is not None else ""
-        mode_name = MODE_NAME.get(mode, _fmt_mode(mode))
+        mode_name = MODE_NAME.get(mode, "mode name error <:warn:1497917334722052136>")
         lines.append(f"{res_icon} {emoji} **{mode_name}** · {label}{tc_str}")
  
     em = _embed(f"<:mapmaker:1497229729944571984>  Battle Log — {p.get('name','?')} #{bs_tag}")
