@@ -128,8 +128,6 @@ intents = discord.Intents.default()
 bot = commands.Bot(
     command_prefix="bs!",
     intents=intents,
-    allowed_contexts=discord.app_commands.AppCommandContext.all(),
-    allowed_installs=discord.app_commands.AppInstallationType.all(),
 )
 
 
