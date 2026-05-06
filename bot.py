@@ -622,7 +622,7 @@ async def battlelog_cmd(
                 all_entries.extend(team)
             elif isinstance(team, dict):
                 all_entries.extend(team.get("players", []))
- 
+print(all_entries) #temporary
         rank    = battle.get("rank")
         tc      = battle.get("trophyChange")
         brawler = None
@@ -631,7 +631,12 @@ async def battlelog_cmd(
             if not entry_tag:
                 continue
 
-            if _norm(entry_tag) == bs_tag:
+            target_tag = bs_tag.replace("#", "")
+
+            entry_tag = entry.get("tag", "").replace("#", "")
+
+            if entry_tag.upper() != target_tag.upper():
+                continue
                 if rank is None:
                     rank = entry.get("rank")
                 if tc is None:
