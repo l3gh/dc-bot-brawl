@@ -101,6 +101,9 @@ def _norm(tag: str) -> str:
     return tag.lstrip("#").strip().upper()
 
 
+def _norm_tag(t: str) -> str:
+    return re.sub(r'[^A-Z0-9]', '', t.upper())
+
 def _enc(tag: str) -> str:
     """URL-encode tag for API path."""
     return f"%23{_norm(tag)}"
@@ -622,21 +625,14 @@ async def battlelog_cmd(
                 all_entries.extend(team)
             elif isinstance(team, dict):
                 all_entries.extend(team.get("players", []))
-        print(all_entries) #temporary
         rank    = battle.get("rank")
         tc      = battle.get("trophyChange")
         brawler = None
         for entry in all_entries:
-            entry_tag = entry.get("tag")
-            if not entry_tag:
+            if _norm_tag(entry.get("tag", "")) != _norm_tag(bs_tag):
                 continue
-
-            target_tag = bs_tag.replace("#", "")
-
-            entry_tag = entry.get("tag", "").replace("#", "")
-
-            if entry_tag.upper() != target_tag.upper():
-                continue
+                print("looking for:", repr(bs_tag))
+                print("entries:", [repr(e.get("tag")) for e in all_entries])
                 if rank is None:
                     rank = entry.get("rank")
                 if tc is None:
