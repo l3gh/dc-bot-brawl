@@ -22,6 +22,7 @@ import matplotlib.ticker as mticker
 from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
+from logger import log_command
 
 load_dotenv()
 
@@ -459,6 +460,7 @@ def build_trophy_graph(
 @bot.tree.command(name="link", description="Link your Brawl Stars tag to your Discord account.")
 @app_commands.describe(tag="Your Brawl Stars player tag  (e.g. #ABC123)")
 async def link_cmd(interaction: discord.Interaction, tag: str) -> None:
+    await log_interaction(interaction, "link")
     await interaction.response.defer(ephemeral=True)
     clean = _norm(tag)
     async with aiohttp.ClientSession() as s:
@@ -480,6 +482,7 @@ async def link_cmd(interaction: discord.Interaction, tag: str) -> None:
 
 @bot.tree.command(name="unlink", description="Remove your linked Brawl Stars tag.")
 async def unlink_cmd(interaction: discord.Interaction) -> None:
+    await log_interaction(interaction, "unlink")
     if not db_get(interaction.user.id):
         await interaction.response.send_message(
             embed=_err("You don't have a linked tag."), ephemeral=True
@@ -494,6 +497,7 @@ async def unlink_cmd(interaction: discord.Interaction) -> None:
 
 @bot.tree.command(name="whoami", description="Show your currently linked Brawl Stars tag.")
 async def whoami_cmd(interaction: discord.Interaction) -> None:
+    await log_interaction(interaction, "whoami")
     tag = db_get(interaction.user.id)
     if not tag:
         await interaction.response.send_message(
@@ -511,6 +515,7 @@ async def whoami_cmd(interaction: discord.Interaction) -> None:
 @bot.tree.command(name="tagof", description="See which Brawl Stars tag another Discord user has linked.")
 @app_commands.describe(user="The Discord user to look up")
 async def tagof_cmd(interaction: discord.Interaction, user: discord.User) -> None:
+    await log_interaction(interaction, "tagof")
     tag = db_get(user.id)
     if not tag:
         await interaction.response.send_message(
@@ -539,6 +544,7 @@ async def profile_cmd(
     user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
+    await log_interaction(interaction, "profile")
     await interaction.response.defer()
     try:
         bs_tag = await resolve_tag(interaction, user, tag)
@@ -586,6 +592,7 @@ async def battlelog_cmd(
     tag: str | None = None,
     count: app_commands.Range[int, 1, 25] = 15,
 ) -> None:
+    await log_interaction(interaction, "battlelog")
     await interaction.response.defer()
     try:
         bs_tag = await resolve_tag(interaction, user, tag)
@@ -688,6 +695,7 @@ async def brawlers_cmd(
     tag: str | None = None,
     sort: str = "trophies",
 ) -> None:
+    await log_interaction(interaction, "brawlers")
     await interaction.response.defer()
     try:
         bs_tag = await resolve_tag(interaction, user, tag)
@@ -754,6 +762,7 @@ async def top_cmd(
     user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
+    await log_interaction(interaction, "top")
     await interaction.response.defer()
 
     try:
@@ -830,6 +839,7 @@ async def club_cmd(
     user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
+    await log_interaction(interaction, "club")
     await interaction.response.defer()
     async with aiohttp.ClientSession() as s:
         try:
@@ -868,6 +878,7 @@ async def clubmembers_cmd(
     tag: str | None = None,
     sort: str = "trophies",
 ) -> None:
+    await log_interaction(interaction, "clubmembers")
     await interaction.response.defer()
     async with aiohttp.ClientSession() as s:
         try:
@@ -908,6 +919,7 @@ async def clubmembers_cmd(
 
 @bot.tree.command(name="events", description="Show the current Brawl Stars event rotation.")
 async def events_cmd(interaction: discord.Interaction) -> None:
+    await log_interaction(interaction, "events")
     await interaction.response.defer()
     async with aiohttp.ClientSession() as s:
         try:
@@ -948,6 +960,7 @@ async def events_cmd(interaction: discord.Interaction) -> None:
 
 @bot.tree.command(name="brawlerlist", description="List every Brawl Stars brawler.")
 async def brawlerlist_cmd(interaction: discord.Interaction) -> None:
+    await log_interaction(interaction, "brawlerlist")
     await interaction.response.defer()
     async with aiohttp.ClientSession() as s:
         try:
@@ -975,6 +988,7 @@ async def brawlerlist_cmd(interaction: discord.Interaction) -> None:
 @bot.tree.command(name="brawlerinfo", description="Star powers, gadgets and ID for a specific brawler.")
 @app_commands.describe(name="Brawler name (e.g. Shelly, Mortis, El Primo)")
 async def brawlerinfo_cmd(interaction: discord.Interaction, name: str) -> None:
+    await log_interaction(interaction, "brawlerinfo")
     await interaction.response.defer()
     async with aiohttp.ClientSession() as s:
         try:
@@ -1024,6 +1038,7 @@ async def brawlerinfo_cmd(interaction: discord.Interaction, name: str) -> None:
 async def rankings_players_cmd(
     interaction: discord.Interaction, country: str = "global"
 ) -> None:
+    await log_interaction(interaction, "rankings_players")
     await interaction.response.defer()
     code = country.upper() if country.lower() != "global" else "global"
     async with aiohttp.ClientSession() as s:
@@ -1049,6 +1064,7 @@ async def rankings_players_cmd(
 async def rankings_clubs_cmd(
     interaction: discord.Interaction, country: str = "global"
 ) -> None:
+    await log_interaction(interaction, "rankings_clubs")
     await interaction.response.defer()
     code = country.upper() if country.lower() != "global" else "global"
     async with aiohttp.ClientSession() as s:
@@ -1076,6 +1092,7 @@ async def rankings_clubs_cmd(
 async def rankings_brawler_cmd(
     interaction: discord.Interaction, brawler: str, country: str = "global"
 ) -> None:
+    await log_interaction(interaction, "rankings_brawler")
     await interaction.response.defer()
     code = country.upper() if country.lower() != "global" else "global"
 
@@ -1120,6 +1137,7 @@ async def rankings_brawler_cmd(
 async def powerplay_seasons_cmd(
     interaction: discord.Interaction, country: str = "global"
 ) -> None:
+    await log_interaction(interaction, "powerplay_seasons")
     await interaction.response.defer()
     code = country.upper() if country.lower() != "global" else "global"
     async with aiohttp.ClientSession() as s:
@@ -1154,6 +1172,7 @@ async def powerplay_seasons_cmd(
 async def powerplay_season_cmd(
     interaction: discord.Interaction, season_id: int, country: str = "global"
 ) -> None:
+    await log_interaction(interaction, "powerplay_seasons")
     await interaction.response.defer()
     code = country.upper() if country.lower() != "global" else "global"
     async with aiohttp.ClientSession() as s:
@@ -1192,6 +1211,7 @@ async def compare_cmd(
     user1: discord.User | None = None,
     user2: discord.User | None = None,
 ) -> None:
+    await log_interaction(interaction, "compare")
     await interaction.response.defer()
 
     try:
@@ -1288,6 +1308,7 @@ async def stats_cmd(
     user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
+    await log_interaction(interaction, "stats")
     await interaction.response.defer()
     try:
         bs_tag = await resolve_tag(interaction, user, tag)
@@ -1344,6 +1365,7 @@ async def trophygraph_cmd(
     user: discord.User | None = None,
     tag: str | None = None,
 ) -> None:
+    await log_interaction(interaction, "trophygraph")
     await interaction.response.defer()
 
     try:
