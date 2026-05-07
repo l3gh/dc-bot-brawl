@@ -1,5 +1,9 @@
 import os
 import aiohttp
+import discord
+
+from dotenv import load_dotenv
+load_dotenv()
 
 WEBHOOK_URL = os.getenv("LOG_WEBHOOK_URL")
 
@@ -24,7 +28,10 @@ async def log_command(ctx, command_name):
 
     embed = {
         "title": f"/{command_name}",
-        "color": 0x5865F2,
+        "color": 16448246,
+        "thumbnail": {
+            "url": "https://l3gh.com/assets/images/home-favicon.jpg"
+        },
         "fields": [
             {
                 "name": "User",
@@ -56,7 +63,10 @@ async def log_interaction(interaction: discord.Interaction, command_name: str):
 
     embed = {
         "title": f"/{command_name}",
-        "color": 0x5865F2,
+        "color": 16448246,
+        "thumbnail": {
+            "url": "https://l3gh.com/assets/images/home-favicon.jpg"
+        },
         "fields": [
             {
                 "name": "User",
