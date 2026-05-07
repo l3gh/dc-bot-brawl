@@ -10,7 +10,14 @@ WEBHOOK_URL = os.getenv("LOG_WEBHOOK_URL")
 
 async def send_log(embed: dict):
     async with aiohttp.ClientSession() as session:
-        await session.post(WEBHOOK_URL, json={"embeds": [embed]})
+        await session.post(
+            WEBHOOK_URL,
+            json={
+                "username": "Genie Log System",
+                "avatar_url": "https://l3gh.com/assets/images/home-favicon.jpg",
+                "embeds": [embed]
+            }
+        )
 
 
 async def log_command(ctx, command_name):
@@ -30,7 +37,7 @@ async def log_command(ctx, command_name):
         "title": f"/{command_name}",
         "color": 16448246,
         "thumbnail": {
-            "url": "https://l3gh.com/assets/images/home-favicon.jpg"
+            "url": str(ctx.client.user.display_avatar.url)
         },
         "fields": [
             {
@@ -65,7 +72,7 @@ async def log_interaction(interaction: discord.Interaction, command_name: str):
         "title": f"/{command_name}",
         "color": 16448246,
         "thumbnail": {
-            "url": "https://l3gh.com/assets/images/home-favicon.jpg"
+            "url": str(interaction.client.user.display_avatar.url)
         },
         "fields": [
             {
