@@ -216,6 +216,7 @@ MODE_EMOJI: dict[str, str] = { # maybe ill go and get emojis for all of them idk
     "brawlTV":       "<:brawlTV:1495581804327993424>",
     "ranked":        "<:ranked:1495581799441633350>",
     "info":          "<:info:1495581796849553499>",
+    "tagTeam":       "<:duels:1495582888513638420>",
 }
 
 def _fmt_mode(mode: str) -> str:
@@ -247,6 +248,7 @@ MODE_NAME: dict[str, str] = {
     "brawlTV":       "Brawl TV",
     "ranked":        "Ranked",
     "info":          "Info",
+    "tagTeam": "Duels",
 }
 
 ROLE_EMOJI: dict[str, str] = {
@@ -590,7 +592,7 @@ async def battlelog_cmd(
     except ValueError as e:
         await interaction.followup.send(embed=_err(str(e)))
         return
- 
+
     async with aiohttp.ClientSession() as s:
         try:
             log_data, p = await asyncio.gather(
@@ -600,19 +602,20 @@ async def battlelog_cmd(
         except BSError as e:
             await interaction.followup.send(embed=_err(f"API {e.status}: {e.message}"))
             return
- 
+
     battles = _items(log_data)[:count]
     if not battles:
         await interaction.followup.send(embed=_err("No recent battles found."))
         return
- 
+
     lines: list[str] = []
     for b in battles:
         event  = b.get("event", {})
         battle = b.get("battle", {})
-        mode   = event.get("mode", "unknown")
+        print("full battle:", battle)
+        mode = event.get("mode") or battle.get("mode", "unknown")
         result = battle.get("result")
- 
+
         all_entries: list[dict] = []
 
         players = battle.get("players") or []
@@ -627,28 +630,30 @@ async def battlelog_cmd(
                 all_entries.extend(team.get("players", []))
         rank    = battle.get("rank")
         tc      = battle.get("trophyChange")
+        print("mode:", mode, "battle tc:", tc)
         brawler = None
         for entry in all_entries:
+            print("looking for:", repr(_norm_tag(bs_tag)))
+            print("entry tag:", repr(_norm_tag(entry.get("tag", ""))))
             if _norm_tag(entry.get("tag", "")) != _norm_tag(bs_tag):
                 continue
-                print("looking for:", repr(bs_tag))
-                print("entries:", [repr(e.get("tag")) for e in all_entries])
-                if rank is None:
-                    rank = entry.get("rank")
+            print("MATCHED ENTRY:", entry)
+            if rank is None:
+                rank = entry.get("rank")
+            if tc is None:
+                tc = entry.get("trophyChange")
+            brawler_data = entry.get("brawler")
+            brawlers_data = entry.get("brawlers")  # duels only
+
+            if isinstance(brawler_data, dict):
+                brawler = brawler_data.get("name")
                 if tc is None:
                     tc = entry.get("trophyChange")
-                brawler_data = entry.get("brawler")
-                brawlers_data = entry.get("brawlers")  # duels only
-
-                if isinstance(brawler_data, dict):
-                    brawler = brawler_data.get("name")
-                    if tc is None:
-                        tc = entry.get("trophyChange")
-                elif isinstance(brawlers_data, list) and brawlers_data:
-                    brawler = brawlers_data[0].get("name")  # first brawler played
-                    if tc is None:
-                        tc = sum(b.get("trophyChange", 0) for b in brawlers_data)
-                break
+            elif isinstance(brawlers_data, list) and brawlers_data:
+                brawler = brawlers_data[0].get("name")  # first brawler played
+                if tc is None:
+                    tc = sum(b.get("trophyChange", 0) for b in brawlers_data)
+            break
 
         label     = (brawler or "brawler error <:warn:1497917334722052136>").title()
         emoji     = MODE_EMOJI.get(mode, "🎮")
@@ -656,7 +661,7 @@ async def battlelog_cmd(
         tc_str    = f"  ({'+' if tc and tc > 0 else ''}{tc}<:trophy:1497229732448829580>)" if tc is not None else ""
         mode_name = MODE_NAME.get(mode, "mode name error <:warn:1497917334722052136>")
         lines.append(f"{res_icon} {emoji} **{mode_name}** · {label}{tc_str}")
- 
+
     em = _embed(f"<:mapmaker:1497229729944571984>  Battle Log — {p.get('name','?')} #{bs_tag}")
     em.description = "\n".join(lines)
     em.set_footer(text=f"Last {len(battles)} battles  •  api.brawlstars.com")
