@@ -612,7 +612,6 @@ async def battlelog_cmd(
     for b in battles:
         event  = b.get("event", {})
         battle = b.get("battle", {})
-        print("full battle:", battle)
         mode = event.get("mode") or battle.get("mode", "unknown")
         result = battle.get("result")
 
@@ -630,14 +629,10 @@ async def battlelog_cmd(
                 all_entries.extend(team.get("players", []))
         rank    = battle.get("rank")
         tc      = battle.get("trophyChange")
-        print("mode:", mode, "battle tc:", tc)
         brawler = None
         for entry in all_entries:
-            print("looking for:", repr(_norm_tag(bs_tag)))
-            print("entry tag:", repr(_norm_tag(entry.get("tag", ""))))
             if _norm_tag(entry.get("tag", "")) != _norm_tag(bs_tag):
                 continue
-            print("MATCHED ENTRY:", entry)
             if rank is None:
                 rank = entry.get("rank")
             if tc is None:
@@ -650,7 +645,7 @@ async def battlelog_cmd(
                 if tc is None:
                     tc = entry.get("trophyChange")
             elif isinstance(brawlers_data, list) and brawlers_data:
-                brawler = brawlers_data[0].get("name")  # first brawler played
+                brawler = " / ".join(b.get("name", "?").title() for b in brawlers_data)
                 if tc is None:
                     tc = sum(b.get("trophyChange", 0) for b in brawlers_data)
             break
